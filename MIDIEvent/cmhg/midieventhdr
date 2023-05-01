@@ -1,0 +1,9 @@
+title-string:	MIDIEvent
+help-string:	MIDIEvent 0.95 © Lauren Rad
+date-string: 27 Apr 2023
+
+event-handler: midi_entry/midi_handler 17 ; should use preprocessor to sub event num later
+service-call-handler: service_handler 88 ; Service_MIDI
+
+initialisation-code: midievent_init
+finalisation-code: midievent_final

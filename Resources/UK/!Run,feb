@@ -1,0 +1,48 @@
+Set Midimon$Dir <Obey$Dir>
+
+RMEnsure UtilityModule 3.10 Error This application requires RISC OS 3.10 or later
+RMEnsure UtilityModule 3.70 RMEnsure CallASWI 0.02 RMLoad System:Modules.CallASWI
+RMEnsure UtilityModule 3.70 RMEnsure CallASWI 0.02 Error You need CallASWI 0.02 or later to run !Midimon
+RMEnsure FPEmulator 4.03 RMLoad System:Modules.FPEmulator
+RMEnsure FPEmulator 4.03 Error You need FPEMulator 4.03 or later to run !Midimon
+RMEnsure SharedCLibrary 5.17 RMLoad System:Modules.Clib
+RMENsure SharedCLibrary 5.34 Error You need SharedCLibrary 5.34 or later to run !Midimon
+RMEnsure FilterManager 0.09 RMLoad System:modules.FilterMgr
+RMEnsure FilterManager 0.09 Error You need FilterManager 0.09 or later to run !Midimon
+RMEnsure BorderUtils 0.02 RMEnsure WindowManager 3.17 RMLoad System:modules.BorderUtil
+
+| Just doing all the Toolbox modules as a precaution
+RMEnsure Toolbox 0.00 RMLoad System:modules.toolbox.toolbox
+RMEnsure Toolbox 1.23 Error You need Toolbox 1.23 or later to run !Midimon
+RMEnsure Window 0.00 RMLoad System:modules.toolbox.window
+RMEnsure Window 1.15 Error You need Window 1.15 or later to run !Midimon
+RMEnsure Menu 0.00 RMLoad System:modules.toolbox.menu
+RMEnsure Menu 0.15 Error You need Menu 0.15 or later to run !Midimon
+RMEnsure Iconbar 0.00 RMLoad System:modules.toolbox.iconbar
+RMEnsure Iconbar 1.08 Error You need Iconbar 1.08 or later to run !Midimon
+RMEnsure ProgInfo 0.00 RMLoad System:modules.toolbox.proginfo
+RMEnsure ProgInfo 0.05 Error You need ProgInfo 0.05 or later to run !Midimon
+RMEnsure FileInfo 0.00 RMLoad System:modules.toolbox.fileinfo
+RMEnsure FileInfo 0.05 Error You need FileInfo 0.05 or later to run !Midimon
+RMEnsure SaveAs 0.00 RMLoad System:modules.toolbox.saveas
+RMEnsure SaveAs 0.03 Error You need SaveAs 0.03 or later to run !Midimon
+RMEnsure FontDbox 0.00 RMLoad System:modules.toolbox.fontdbox
+RMEnsure FontDbox 0.03 Error You need FontDbox 0.03 or later to run !Midimon
+RMEnsure FontMenu 0.00 RMLoad System:modules.toolbox.fontmenu
+RMEnsure FontMenu 0.11 Error You need FontMenu 0.11 or later to run !Midimon
+RMEnsure ColourDbox 0.00 RMLoad System:modules.toolbox.colourdbox
+RMEnsure ColourDbox 0.03 Error You need ColourDbox 0.03 or later to run !Midimon
+RMEnsure ColourMenu 0.00 RMLoad System:modules.toolbox.colourmenu
+RMEnsure ColourMenu 0.10 Error You need ColourMenu 0.10 or later to run !Midimon
+RMEnsure Scale 0.00 RMLoad System:modules.toolbox.scale
+RMEnsure Scale 0.003 Error You need Scale 0.03 or later to run !Midimon
+RMEnsure PrintDbox 0.00 RMLoad System:modules.toolbox.printdbox
+RMEnsure PrintDbox 0.03 Error You need PrintDbox 0.10 or later to run !Midimon
+
+| Misc helper modules
+RMEnsure KeyEvent 0.00 RMLoad <Midimon$Dir>.KeyEvent
+RMEnsure MidiEvnet 0.00 RMLoad <Midimon$Dir>.MidiEvent
+
+Iconsprites <Midimon$Dir>.!Sprites
+wimpslot -min 64K -max 64K
+Run <Midimon$Dir>.!RunImage

@@ -1,0 +1,56 @@
+/* Copyright 2023 Lauren Rad
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * Application: !Midimon
+ * File: choices.h
+ * Author: Lauren Rad
+ * Purpose: Non-Wimp functions for saving/loading the Choices file. (Header)
+*/
+
+#ifndef MIDIMON_CHOICES_H
+#define MIDIMON_CHOICES_H
+#include <stdio.h>
+
+typedef struct Choices {
+  int choices_ver; /* This is to mark the version of the choices file */
+  int opt_txchan; /* Tx Channel */
+  int opt_altnoteoff; /* Alternate zero velocity note off */
+  int opt_ignoreclock; /* Ignore clock messages */
+  int opt_fakefastclock; /* Use fake fast clock - for now this will just be set for all devices */
+} Choices;
+
+extern Choices global_choices; /* This will be defined in main */
+
+/* Define default values here */
+#define DEFAULTS_CHOICES_VER  	       	0
+#define DEFAULTS_OPT_TXCHAN		1
+#define DEFAULTS_OPT_ALTNOTEOFF		0
+#define DEFAULTS_OPT_IGNORECLOCK	0
+#define DEFAULTS_OPT_FAKEFASTCLOCK	0
+
+/* max pathname length - 1000 should be enough here because every time i've
+tried to make paths this long to test, the filer died horribly anyway */
+#define MAX_PATHNAME	1000
+
+/* This will be appended to Choices$Path or Choices$Write */
+#define LEAFNAME	"MidiMon"
+
+Choices init_choices(void); /* provide default choices */
+int load_choices(void); /* load choices from file */
+int save_choices(void); /* save choices to file */
+FILE *openin_choices(char *choices_path_env); /* open choices file for reading */
+
+#endif

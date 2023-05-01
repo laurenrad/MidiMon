@@ -1,0 +1,40 @@
+/------------------\
+| Part 1 - General |
+\------------------/
+- Line length is to be 100.
+- The app name is MidiMon (MIDI is not cased as an acronym as it looks   better this way)
+- Reporter output: all reporter output should start with "MidiMon:" unless it is continuing a
+  previous message, in which case it should indent with two spaces. A compile-time option will    turn on/off any messages which are useful only for debug.
+
+/----------------------\
+| Part 2 - File Naming |
+\----------------------/
+- Source files corresponding to a certain window should end in "win", as in "choiceswin, 
+"messageswin"
+
+/------------------------------\
+|   Part 3 - Function Naming   |
+\------------------------------/
+
+- In function names, all references to transmitting MIDI should use the
+abbreviation tx rather than send. For example: tx_noteoff to call the
+MIDI_TxNoteOff SWI. It's more compact and consistent with the module.
+- Gadget handlers should start with the gadget name, like "button_progchgsend()"
+
+/----------------------------------------\
+| Part 4 - Toolbox Event Names & Numbers |
+\----------------------------------------/
+- Toolbox event numbers should start at 0x0F00.
+- Toolbox event constant names should be in the general form:
+	Event_Component_Action
+  Where the component is the window or program part the event pertains   to (has nothing to do with component IDs.)
+  
+/------------------------\
+| Part 5 - Documentation |
+\------------------------/
+- Interactive help:
+	- I can't find much on this in the official style guide, so I'm
+	  making this up on my own mostly.
+	- If the control has a separate label, the help should be on the
+	  control, not the label.
+	- For menus: "Click SELECT to view help." etc
