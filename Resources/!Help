@@ -1,3 +1,234 @@
-MidiMon is an application for monitoring and sending MIDI messages with the USB-MIDI module.
+                                                        
+                            /----------------------------------\
+                            |           MidiMon 0.10           |
+                            |           by Lauren Rad          |
+                            \__________________________________/
 
-Documentation TBD.
+----------------- 
+Table of Contents  
+-----------------
+  1.  Introduction
+  2.  Installing and Running
+  3.  Features Overview
+  4.  The Main Menu
+  5.  The Monitor Window
+  6.  The Piano Window  
+  7.  The Messages Window
+  8.  The Song Control Window  
+  9.  The Choices Dialog
+  10. Building MidiMon from Source 
+  11. Issues and Miscellany  
+
+--------------------
+Part 1. Introduction
+--------------------
+MidiMon is an application for monitoring incoming MIDI messages, as well as
+sending test messages. This documentation will go over installation as well
+as the various components and features.
+
+MidiMon is designed to work with the USB-MIDI module by Rick Murray, version
+0.08 or higher. In its current state it is designed only to work with this
+module and not the legacy Acorn MIDI module, as I have no way of accessing
+the legacy hardware or even its documentation. However, if anyone wants, it
+hypothetically could be ported over to use the legacy module with some
+changes as the API for USB-MIDI is similar. The module can currently be
+obtained from heyrick.eu.
+
+MidiMon is free software, distributed under the terms of the Apache License,
+version 2.0. See the included LICENSE file for more information.
+
+-------------------------------
+ Part 2. Installing and Running 
+-------------------------------
+MidiMon is "installed" the same as any other RISC OS application; simply put
+the app wherever you want. However, a couple other things to know on this
+topic:
+
+  - MidiMon saves its choices to a single data file in your Choices
+    directory, typically at $.!Boot.Choices.MidiMon.
+  - The USB-MIDI module must be running before MidiMon is started, and must
+    not be stopped while MidiMon is running, or a warning will be displayed
+    and the application will exit. MidiMon does not start USB-MIDI on its
+    own; this is by design.
+  - MidiMon uses two additional helper modules to perform its functions,
+    MIDIEvent and KeyEvent. Stopping these while the application is running
+    will not cause an error but some functions will cease to work. MidiMon
+    does not currently stop these modules on exit, but after qutting MidiMon
+    these modules can be stopped.
+  - During development, I've had a lot of problems using the USB-MIDI module
+    with my setup. It often took several tries to get one of my interfaces to
+    both be recognized and start sending/receiving MIDI. This occurred with
+    the module's test programs as well, so seems to be out of my control for
+    the moment. (If there are issues with the module, I'm unfortunately not
+    qualified to contribute to it at the moment). If you are having similar
+    issues, confirm with the module's included test programs first whether
+    the module is working properly. It may take various combos of
+    plugging/unplugging, rebooting, etc. 
+  - While I'm at it, here is the hardware involved: Raspberry Pi 400,
+    Presonus AudioBox USB 96, generic USB to MIDI cable interface (the
+    one with the treble staff logo; it's sold under a million made-up brands
+    online). Additionally I've tried a Roland UM-ONE Mk2, and it doesn't work
+    at all. My preferred interface is my Midiman MIDISPORT 2x2, but it
+    requires special driver trickery, so it's unsurprisingly not supported. I
+    used it hooked up to my Windows PC instead for testing.    
+  - See the separate section entitled Building later for information on
+    building MidiMon from source.
+    
+-------------------------
+Part 3. Features Overview
+------------------------- 
+Once MidiMon loads onto the Iconbar, clicking
+SELECT on its icon will open the Monitor window. Clicking the MENU button on
+the icon opens the main menu. ADJUST clicking on the icon is currently
+unused.
+
+Here are the main windows/functions comprising MidiMon, which are described
+in their own sections below:
+
+  - The Monitor window
+  - The Piano window
+  - The Messages window
+  - The Song Control window
+  - The Choices dialog
+  - The Main menu
+
+---------------------
+Part 4. The Main Menu 
+---------------------
+The Main menu contains the following components:
+  - Info: View information about the application.
+  - Controllers: Opens a submenu which contains items which open the
+    following windows: Messages, Piano, Song Control.
+  - Devices: Opens a menu to select the active MIDI device from up to 4
+    devices. Do note that this doesn't really seem to work as of this
+    version, but on startup the application should successfully use the
+    default device. If you get into trouble with this, quit and restart the
+    application.
+  - Panic: Resets the state of the MIDI module. This can sometimes help if
+    there is a problem.
+  - Help: Opens this help file.
+  - Choices: Opens the Choices dialog.
+  - Quit: Quits MidiMon.
+
+--------------------------
+Part 5. The Monitor Window
+--------------------------  
+The Monitor window shows incoming MIDI messages in a scrolling list and the
+currently selected device (see the Main menu section for more information on
+devices). Clicking the MENU mouse button on the window opens a menu which
+offers the following functions:
+  - Save: Save the log to a text file.
+  - Copy: Copy the selected item to the clipboard. (Currently not implemented
+    in this version).
+  - Clear: Clear the log.
+
+------------------------  
+Part 6. The Piano Window  
+------------------------
+The Piano window contains a simple virtual piano/keyboard controller. Use
+this to send test note messages. 
+
+There is a two-octave keyboard of clickable buttons which are also
+controllable by keys on the computer keyboard. Currently the key mapping is
+static and unfortunately locked to a US/UK QWERTY layout. Key controls can be
+used if the window has focus or if Hotkeys are enabled with the Hotkeys
+option on the bottom toolbar, in which case the shortcuts can be used
+regardless of what window has focus.  Behind the curtain, note that the key
+focus model here uses a hack that goes outside the normal channels to handle
+key releases properly, so it may behave in subtly different ways. Here is the
+key mapping as it relates to the keys:
+
+  2 3   5 6 7   S D   G H J
+ Q W E R T Y U Z X C V B N M
+                            
+When first opened the window will not show all of the two octaves, but can be
+resized or zoomed to show all keys.
+
+The left toolbar contains a pitch bend control; Drag the bar up and down with
+SELECT to bend the pitch, or click with ADJUST to reset the pitch to center.
+
+On the bottom toolbar, there is also a slider to set the velocity of outgoing
+notes as well as a control to shift the octave of the keys up and down by a
+maximum of 5 octaves. Note that the piano will only output valid MIDI notes
+so in the very top and bottom octaves some keys may not output notes.
+
+---------------------------
+Part 7. The Messages Window 
+---------------------------
+The Messages window allows you to send miscellaneous other types of MIDI
+messages.
+
+The Control Change section lets you send a Control Change message. Set the
+controller number and value for the message and then click the associated
+Send button. This does not currently list any of the standard controller
+numbers, so please look up a guide online if needed.
+
+The Program Change section lets you send a Program Change message for
+changing patches/samples/sounds. The number box on the left lets you choose
+by number and to the right is a list which will allow selection by standard
+GM names. Select a program and click the associated Send button.
+
+The Misc selection contains various other messages which can be sent which do
+not need parameters; this currently includes Tune Request and System Reset
+messages.
+
+-------------------------------
+Part 8. The Song Control Window 
+-------------------------------
+The Song Control window allows you to send various messages relating to song
+playback contol. MidiMon does not currently handle anything relating to MTC,
+MIDI Beat Clock, or any synchronization/clock features.
+
+Use the Song Select number box to select a song number and then click the
+associated Send button to send a Song Select message.
+
+The Start, Continue, and Stop buttons send their respective MIDI song control
+commands.
+
+--------------------------
+Part 9. The Choices Dialog  
+-------------------------- 
+The Choices dialog contains the following choices:
+  - Tx Channel: Set the MIDI channel for outgoing MIDI messages.
+  - Zero Velocity Note Off: When selected, send a Note On message with
+    Velocity=0 instead of a Note Off message when ending a note. This is not
+    currently implemented.
+  - Ignore Clock Messages: Ignore incoming clock messages.
+  - Fake Fast Clock: Set module option to use system ticker instead of high
+    resolution timer. See USB-MIDI's user guide for info on this option.
+    
+Additionally, the buttons at the bottom have the standard meanings:
+  - Default resets all choices to the default values.
+  - Save saves the choices to the choices file in the system's Choices path.
+  - Cancel closes the Choices dialog and discards any changes.
+  - Set makes all choices active without saving to the choices file.
+
+-------------------------------------
+Part 10. Building MidiMon from Source 
+-------------------------------------
+MidiMon uses the User Interface Toolbox and is packaged to be built with the ROOL DDE. The current release is built with: 
+ROOL DDE 31a (cc 5.90/amu 5.36/link 5.38)
+
+MidiMon uses the standard Makefiles; to build and install run the MkInstall
+TaskObey script and to clean/remove, run the MkClean TaskObey script.
+
+The subdirectories MIDIEvent and KeyEvent contain the sources for the helper
+modules which deliver MIDI and key events to MidiMon. These have their own
+build scripts which are run separately. When built, the binaries should be
+places into the Modules subdirectory as this is where MidiMon's Makefile will
+pull from when installing.
+
+------------------------------
+Part 11. Issues and Miscellany  
+------------------------------
+  - Receiving System Exclusive messages may break the Monitor window. This
+    seems to be due to a combination of a bug in the USB-MIDI module and the
+    design of MidiMon. If this occurs, use the Panic option in the main menu
+    to reset the module state.
+  - MidiMon outputs some messages to !Reporter:
+    http://www.avisoft.f9.co.uk/Reporter.htm 
+    A compile-time option can enable additional debug output through
+    Reporter. !Reporter is not needed to use or run MidiMon.
+  - If you have any questions or issues or just find the software useful,
+    feel free to contact me at: lauren@cybertapes.com
+  - This is my first RISC OS application!
