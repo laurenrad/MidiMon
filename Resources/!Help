@@ -105,10 +105,9 @@ The Main menu contains the following components:
   - Controllers: Opens a submenu which contains items which open the
     following windows: Messages, Piano, Song Control.
   - Devices: Opens a menu to select the active MIDI device from up to 4
-    devices. Do note that this doesn't really seem to work as of this
-    version, but on startup the application should successfully use the
-    default device. If you get into trouble with this, quit and restart the
-    application.
+    devices. This option currently is disabled as it does not work in this
+    version, but the application will work with whatever the USB-MIDI module
+    considers to be the 'default' device on startup.
   - Panic: Resets the state of the MIDI module. This can sometimes help if
     there is a problem.
   - Help: Opens this help file.
@@ -124,7 +123,7 @@ devices). Clicking the MENU mouse button on the window opens a menu which
 offers the following functions:
   - Save: Save the log to a text file.
   - Copy: Copy the selected item to the clipboard. (Currently not implemented
-    in this version).
+    in this version -- this option is disabled).
   - Clear: Clear the log.
 
 ------------------------  

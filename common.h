@@ -28,8 +28,6 @@
 extern Choices global_choices;
 extern int device_num;
 
-#define REPORTER_DEBUG 1
-
 /* Events */
 
 /* Events - Window show events */
