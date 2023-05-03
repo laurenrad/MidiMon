@@ -132,6 +132,7 @@ int tx_noteon(int note, int velocity, int oct_shift)
   report_printf("MidiMon: Note on tx: %d",note);
 #endif
 
+  _swi(MIDI_SetTxChannel,_IN(0),global_choices.opt_txchan);
   _swi(MIDI_TxNoteOn,_INR(0,1)|_OUT(1),note,velocity,&status);
 
   return status;
@@ -144,25 +145,25 @@ int tx_noteon(int note, int velocity, int oct_shift)
 int tx_noteoff(int note, int velocity, int oct_shift)
 {
   note = note + (12 * oct_shift);
-  int chan = global_choices.opt_txchan - 1; /* opt_txchan is numbered 0-15 */
 
   /* TxNoteOff will send note off as a note on with velocity 0; switch on the relevant choice. */
   if (global_choices.opt_altnoteoff == 1) {
-    _swi(MIDI_SetTxChannel,_IN(0)|_OUT(0),0,&chan);
+    _swi(MIDI_SetTxChannel,_IN(0),global_choices.opt_txchan);
     _swi(MIDI_TxNoteOn,_INR(0,1),note,0);
   }
   else {
     /* Send a proper note off manually. Currently hardcoded port=0 */
     int comm = 0;
     comm = 0x80; /* byte 0 high bits = command */
-    comm = comm | chan; /* byte 0 low bits = chan */
+    comm = comm | global_choices.opt_txchan - 1; /* byte 0 low bits = chan */
     comm = comm | (note << 8); /* byte 1 is note */
     comm = comm | (velocity << 16); /* byte 2 is velocity */
     _swi(MIDI_TxCommand,_INR(0,1),comm,0); /* send immediately */
   }
 
 #ifdef REPORTER_DEBUG
-  report_printf("MidiMon: Note off tx: note=%d, vel=%d, chan=%d",note,velocity,chan);
+  report_printf("MidiMon: Note off tx: note=%d, vel=%d, chan=%d",note,velocity,
+  	 	 global_choices.opt_txchan);
 #endif
 
   return 0;
