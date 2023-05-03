@@ -276,7 +276,7 @@ int key_clicked(int event_code, WimpPollBlock *event, IdBlock *id_block, void *h
     window_get_wimp_handle(0,window_id_piano,&window_handle_piano);
     wimp_set_caret_position(window_handle_piano,-1,0,0,-1,-1);
 
-    if (component < KEY_COUNT && component > 0) { /* only look at piano key buttons */
+    if (component < KEY_COUNT && component >= 0) { /* only look at piano key buttons */
       note = component + BASE_NOTE;
       keys_pressed[component] = 1; /* mark key as pressed for mouseup */
       tx_noteon(note,velocity,octave); /* send note on message */
