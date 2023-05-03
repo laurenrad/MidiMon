@@ -13,7 +13,7 @@ accessing the legacy hardware or even its documentation. However, if anyone
 wants, it hypothetically could be ported over to use the legacy module with
 some changes as the API for USB-MIDI is similar. 
 
-[^1] The module can currently be obtained from [Rick Murray's
+[^1]: The module can currently be obtained from [Rick Murray's
 website](https://heyrick.eu/blog/index.php?diary=20230319).
 
 ## Licensing
