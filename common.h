@@ -95,7 +95,7 @@ extern int device_num;
 #define Gadget_Choices_SetButton	0x08 /* set action button */
 
 /* Gadgets: Monitor window gadgets */
-#define Gadget_Main_ScrollList          0x00
+#define Gadget_Monitor_ScrollList       0x00
 #define Gadget_Monitor_DeviceDisplay	0x04
 #define Gadget_Monitor_DeviceLabel	0x05
 

@@ -56,7 +56,7 @@ static bool monitor_opened = false; /* Track if the window has been opened yet *
 /* Clear all items from the ScrollList */
 int clear_scrolllist(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  scrolllist_delete_items(0,window_id_main,Gadget_Main_ScrollList,0,-1);
+  scrolllist_delete_items(0,window_id_main,Gadget_Monitor_ScrollList,0,-1);
   return 1;
 }
 
@@ -73,7 +73,7 @@ int handle_incoming(WimpMessage *message, void *handle)
     /* I'm kind of afraid to do this because I couldn't find it documented,
        but it seems that if you give index -1 it will add to the end. */
     scrolllist_add_item(ScrollList_AddItem_MakeVisible,window_id_main,
-                        Gadget_Main_ScrollList,printbuf,NULL,NULL,-1);
+                        Gadget_Monitor_ScrollList,printbuf,NULL,NULL,-1);
   }
 
   return 1;
@@ -88,7 +88,7 @@ int window_monitor_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block
     window_id_main = id_block->self_id;
     load_messages_monitorwin();
     /* Invert ScrollList colours */
-    scrolllist_set_colour(0,window_id_main,Gadget_Main_ScrollList,-256,0);
+    scrolllist_set_colour(0,window_id_main,Gadget_Monitor_ScrollList,-256,0);
     /* Set device display */
     update_device_display();
   }
@@ -113,7 +113,7 @@ int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *
      overestimating because it will multiply the maximum line length by
      number of lines. If proper allocation is done later this will be
      reworked. */
-  scrolllist_count_items(0,window_id_main,Gadget_Main_ScrollList,
+  scrolllist_count_items(0,window_id_main,Gadget_Monitor_ScrollList,
   	    	  	&item_count);
   size_estimate = item_count * (unsigned int) MaxLine;
   saveas_set_file_size(0,id_block->self_id,size_estimate);
@@ -138,7 +138,7 @@ int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *
        printing them to the file. Stupid and inefficient, but the lengths
        I go to to avoid dealing with allocating storage! */
     for (int i = 0; i < item_count; i++) {
-      err = scrolllist_get_item_text(0,window_id_main,Gadget_Main_ScrollList,
+      err = scrolllist_get_item_text(0,window_id_main,Gadget_Monitor_ScrollList,
            	   	   	     buf,MaxLine,i,NULL);
       fprintf(outfile,"%s\n",buf);
     }
@@ -191,7 +191,7 @@ int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, vo
   time_t t;
   t = time(NULL);
   struct tm *local = localtime(&t);
-  scrolllist_add_item(0,window_id_main,Gadget_Main_ScrollList,asctime(local),NULL,NULL,-1);
+  scrolllist_add_item(0,window_id_main,Gadget_Monitor_ScrollList,asctime(local),NULL,NULL,-1);
 
   return 1;
 }
@@ -217,7 +217,7 @@ void load_messages_monitorwin(void)
 
   /* Set help strings */
   /* The ScrollList help text doesn't display. This might be a ToolBox bug? */
-  gadget_set_help_message(0,window_id_main,Gadget_Main_ScrollList,
+  gadget_set_help_message(0,window_id_main,Gadget_Monitor_ScrollList,
   	     	  	  msgs_lookup("Monitor|2:Unable to get help."));
   gadget_set_help_message(0,window_id_main,Gadget_Monitor_DeviceDisplay,
   	     	  	  msgs_lookup("Monitor|5:Unable to get help."));
