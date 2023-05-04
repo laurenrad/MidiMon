@@ -16,6 +16,12 @@ some changes as the API for USB-MIDI is similar.
 [^1]: The module can currently be obtained from [Rick Murray's
 website](https://heyrick.eu/blog/index.php?diary=20230319).
 
+## Latest Release
+
+The latest release is v0.10 and is an alpha preview which is not well-tested or
+feature-complete. However, the basic functions should be there. See documentation
+in the release, which can be found [here](https://github.com/laurenrad/MidiMon/releases/tag/v0.1.0-alpha).
+
 ## Licensing
 
 MidiMon is free software, distributed under the terms of the Apache License,
