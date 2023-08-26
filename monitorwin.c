@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdbool.h>
+#include <string.h>
 
 /* System includes */
 #include "kernel.h"
@@ -102,21 +103,44 @@ int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *
   SaveAsSaveToFileEvent *e = (SaveAsSaveToFileEvent *)event;
   unsigned int size_estimate = 0; /* estimated file size */
   unsigned int item_count = 0; /* number of items in ScrollList */
+  int selected = 0; /* currently selected item if applicable */
   char buf[MaxLine];
   char *filename = e->filename;
   FILE *outfile;
   _kernel_oserror *err;
 
-  /* Must provide the estimated file size. This is tough to do accurately
-     because of the lazy way the text is just being stored in the ScrollList,
-     but how important is this? At any rate this will err on the side of
-     overestimating because it will multiply the maximum line length by
-     number of lines. If proper allocation is done later this will be
-     reworked. */
-  scrolllist_count_items(0,window_id_main,Gadget_Monitor_ScrollList,
-  	    	  	&item_count);
-  size_estimate = item_count * (unsigned int) MaxLine;
-  saveas_set_file_size(0,id_block->self_id,size_estimate);
+  report_printf("parent was %d",id_block->parent_component);
+
+  /* First, when estimating size check if we are doing the whole thing or
+     if it's just the selection */
+  if (id_block->parent_component == MenuEntry_Monitor_Save) {
+      	/* Must provide the estimated file size. This is tough to do accurately
+     	   because of the lazy way the text is just being stored in the ScrollList,
+     	   but how important is this? At any rate this will err on the side of
+     	   overestimating because it will multiply the maximum line length by
+     	   number of lines. If proper allocation is done later this will be
+     	   reworked. */
+     	scrolllist_count_items(0,window_id_main,Gadget_Monitor_ScrollList,
+  	    	  	       &item_count);
+  	size_estimate = item_count * (unsigned int) MaxLine;
+  	saveas_set_file_size(0,id_block->self_id,size_estimate);
+  }
+  else if (id_block->parent_component == MenuEntry_Monitor_Selection) {
+    err = scrolllist_get_selected(0,window_id_main,Gadget_Monitor_ScrollList,
+    	  	     	 	  0,&selected);
+       	err = scrolllist_get_item_text(0,window_id_main,Gadget_Monitor_ScrollList,
+       		       	    	       buf,MaxLine,selected,NULL);
+       if (err != NULL) {
+         report_printf("err: %d; %s\n",err->errnum,err->errmess);
+       	size_estimate = strlen(buf);
+       	report_printf("size estimate: %d",size_estimate);
+       	saveas_set_file_size(0,id_block->self_id,size_estimate);
+       }
+  }
+  else {
+    /* I must have added another SaveAs dialogue somewhere, just quit without handling*/
+    return 0;
+  }
 
   /* Since we need to build the file up, first create it with OS_File 11
      so any oserrors can be caught and dealt with appropriately. */
@@ -134,13 +158,20 @@ int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *
     wimp_report_error(&e,0,"MidiMon",NULL,NULL,NULL);
   }
   else {
-    /* Do the actual save by pulling each line from the ScrollList and
+    if (id_block->parent_component == MenuEntry_Monitor_Save) {
+      /* Do the actual save by pulling each line from the ScrollList and
        printing them to the file. Stupid and inefficient, but the lengths
        I go to to avoid dealing with allocating storage! */
-    for (int i = 0; i < item_count; i++) {
+      for (int i = 0; i < item_count; i++) {
+         err = scrolllist_get_item_text(0,window_id_main,Gadget_Monitor_ScrollList,
+           	   	   	        buf,MaxLine,selected,NULL);
+         fprintf(outfile,"%s",buf);
+      }
+    }
+    else {
       err = scrolllist_get_item_text(0,window_id_main,Gadget_Monitor_ScrollList,
-           	   	   	     buf,MaxLine,i,NULL);
-      fprintf(outfile,"%s\n",buf);
+      	    	       	   	     buf,MaxLine,selected,NULL);
+         fprintf(outfile,"%s",buf);
     }
 
     /* Inform the toolbox the file has been saved successfully */

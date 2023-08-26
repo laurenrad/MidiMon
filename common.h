@@ -158,6 +158,10 @@ extern int device_num;
 #define Gadget_Song_SongNum	  	0x04 /* Number range for song select */
 #define Gadget_Song_SongSelSend		0x05 /* Song select send button */
 
+/* Monitor Window entries */
+#define MenuEntry_Monitor_Save		0x02
+#define MenuEntry_Monitor_Selection	0x05
+
 /* Misc other constants */
 #define MaxLine		  		256 /* maximum list line len */
 #define ProdNameMaxLen			50  /* maximum product name len */
