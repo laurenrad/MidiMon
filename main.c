@@ -118,7 +118,6 @@ void register_handlers(void)
 {
   /* Generic Toolbox events */
   event_register_toolbox_handler(-1,1,quit_event,NULL);
-  event_register_toolbox_handler(-1,SaveAs_SaveToFile,save_log_text,NULL);
   event_register_toolbox_handler(-1,Toolbox_Error,tbox_error_handler,NULL);
 
   /* Toolbox events - window shown */
@@ -127,10 +126,6 @@ void register_handlers(void)
   event_register_toolbox_handler(-1,Event_Windows_ShowPiano,window_piano_onshow,NULL);
   event_register_toolbox_handler(-1,Event_Windows_ShowMessages,window_messages_onshow,NULL);
   event_register_toolbox_handler(-1,Event_Windows_ShowSong,window_song_onshow,NULL);
-
-  /* Toolbox events - Monitor window */
-  event_register_toolbox_handler(-1,Event_Monitor_ClearLog,clear_scrolllist,NULL);
-  event_register_toolbox_handler(-1,Event_Monitor_Test,test_button_click,NULL);
 
   /* Toolbox events - Choices window */
   event_register_toolbox_handler(-1,Event_Choices_Set,choices_set_button_click,NULL);
@@ -147,7 +142,6 @@ void register_handlers(void)
   /* Wimp messages */
   event_register_message_handler(Wimp_MQuit,quit_message,0);
   event_register_message_handler(Wimp_MPreQuit,quit_message,0);
-  event_register_message_handler(Message_MIDIDataReceived,handle_incoming,0);
   event_register_message_handler(Message_MIDIError,midi_error,0);
   event_register_message_handler(Message_MIDIInit,midi_initialised,0);
   event_register_message_handler(Message_MIDIDying,midi_dying,0);
