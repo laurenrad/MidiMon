@@ -18,123 +18,152 @@
  * File: piano.c
  * Author: Lauren Rad
  * Purpose: Handlers for the piano controller window.
-*/
+ */
 
-/* Library includes */
+
 #include <stdbool.h>
 
-/* System headers */
 #include "wimp.h"
 #include "wimplib.h"
 #include "kernel.h"
-
-/* Toolbox headers */
 #include "toolbox.h"
 #include "gadgets.h"
 #include "window.h"
+#include "event.h"
+#include "msgs.h" // RISC_OSLib
+#include "msgtrans.h" // RISC_OSLib
 
-/* RISC_OSLib headers for MessageTrans lookup */
-#include "msgs.h"
-#include "msgtrans.h"
-
-/* MidiMon headers */
+// MidiMon stuff
 #include "common.h"
 #include "pianowin.h"
+#include "pianoconst.h"
 #include "preporter.h"
 #include "midi.h"
 
-/* Local helper functions */
-int hotkeys_enabled(void); /* returns 1 if hotkeys are enabled, 0 if disabled */
-int has_caret(void); /* returns 1 if window has the caret, 0 otherwise */
-int get_velocity(void); /* returns the set velocity */
-int get_octave(void); /* returns the set octave shift */
+/*
+ * These structs correspond to the data coming from the KeyEvent helper module.
+ */
+typedef struct KeyUpData {
+  char key_num; // see PRM 1-158
+  int driver_id;
+  int state; // 0 = up, 1 = down
+} KeyUpData;
 
-/* Globals */
+typedef struct KeyUpMessage {
+  int size;
+  int sender;
+  int my_ref;
+  int your_ref;
+  int action_code;
+  KeyUpData key_data;
+} KeyUpMessage;
+
+/* Globals and constants */
 #define KEY_COUNT   24
-#define BASE_NOTE   60 /* Note number of the lowest C on the piano */
-static ObjectId window_id_piano; /* piano window's ObjectId */
-static ObjectId tbar_id_h; /* horizontal toolbar's ObjectId */
-static ObjectId tbar_id_v; /* vertical toolbar's ObjectId */
-static bool piano_opened = false; /* Track if we know the window ID yet */
-static int keys_pressed[KEY_COUNT]; /* keep track of what keys are down.
-       	   		     	    this is hardcoded to the interface
-       	   		     	    design, so watch out! */
+#define BASE_NOTE   60 // Note number of the lowest C on the piano
+static ObjectId window_id_piano; // piano window's ObjectId
+static ObjectId tbar_id_h; // horizontal toolbar's ObjectId
+static ObjectId tbar_id_v; // vertical toolbar's ObjectId
+static bool piano_opened = false; // Track if we know the window ID yet
+static int keys_pressed[KEY_COUNT]; // keep track of what keys are down.
+
+int slider_valuechange(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int key_pressed(WimpMessage *message, void *handle);
+int key_clicked(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
+int slider_snap(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
+void load_messages_pianowin(void);
+int hotkeys_enabled(void);
+int has_caret(void);
+int get_velocity(void);
+int get_octave(void);
 
 /* Called when the piano window is shown. Save ObjectId and update messages. */
+/*
+ * window_piano_onshow
+ * This handler is called when the piano window is shown.
+ * This performs first-time setup including saving the ObjectId, updating messages,
+ * and registering event handlers.
+ * This one also needs to get the toolbar IDs as well, as this window has toolbars.
+ */
 int window_piano_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
   if (!piano_opened) {
      piano_opened = true;
      window_id_piano = id_block->self_id;
 
-     /* Get the toolbar ids too. This can be retrieved from the window ID but it's done here
-     	for convenience.*/
-     window_get_tool_bars(0x09,window_id_piano,&tbar_id_h,NULL,NULL,&tbar_id_v);
-     load_messages_pianowin();
+        window_get_tool_bars(0x09,window_id_piano,&tbar_id_h,NULL,NULL,&tbar_id_v);
+        load_messages_pianowin();
+
+       event_register_toolbox_handler(-1,Slider_ValueChanged,slider_valuechange,NULL);
+       event_register_wimp_handler(-1,Wimp_EMouseClick,key_clicked,0);
+       event_register_wimp_handler(-1,Wimp_EMouseClick,slider_snap,0);
+       event_register_message_handler(Message_KeyEvent,key_pressed,0);
   }
 
   return 1;
 }
 
-/* Handler for the ToolBox's Slider_ValueChanged event. This will fire for any instance of
-   this event, but we'll filter for the pitch bend slider. This will allow it to both send pitch
-   bend on value change and snap back to the center when released, as these controls typically do.*/
+/*
+ * slider_valuechange
+ * This handler is called on any Slider_ValueChanged event.
+ * This filters for the pitch bend slider, and then sends pitch bend on value change.
+ */
 int slider_valuechange(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
   if (id_block->self_component == Gadget_Piano_PitchBend) {
     int val;
     slider_get_value(0,window_id_piano,Gadget_Piano_PitchBend,&val);
     tx_pitchwheel(val);
-
-    /*slider_set_value(0,window_id_piano,Gadget_Piano_PitchBend,8192);*/ /* 8192 is center value */
-    /*report_printf("snapped slider");*/
-
+  } else {
+    return 0; // this wasn't for the pitch bend, so return unhandled
   }
 
   return 1;
 }
 
-/* Handle KeyEvent messages. This is nonstandard but it allows a couple
-   important things for this program:
-   	     - Responding to key up events
-   	     - Ignoring key repeat
-   The disadvantages are that it is tied to the original QWERTY layout and
-   it doesn't know or care about the caret; hopefully this can be improved
-   later.
-*/
+/*
+ * int key_pressed
+ * This responds to KeyEvent messages from the included KeyEvent module.
+ * This is nonstandard but it allows the program t respond to key up events
+ * and ignore key repeat.
+ * The main disadvantage to this solution is it is tied to the QWERTY layout
+ * and it doesn't know or care about the caret.
+ */
 int key_pressed(WimpMessage *message, void *handle)
 {
-  /* Only do something if the window has been opened yet */
-  if (piano_opened == false) {
-    return 1;
-  }
-
-  /* Also don't do anything if hotkeys are not enabled and we don't have the caret */
-  if (!hotkeys_enabled() && !has_caret()) {
-    return 1;
-  }
-
-  KeyUpData d = ((KeyUpMessage *)message)->key_data;
-
   ComponentId component = 0;
   int note = 0;
   int octave = get_octave();
   int velocity = get_velocity();
+  KeyUpData d = ((KeyUpMessage *)message)->key_data;
 
-  /* Then, check for the special case of a mouse up event.
-     This should be more elegant. */
+  if (piano_opened == false) {
+    return 1; // only do something if the window has been opened yet
+  }
+
+  if (!hotkeys_enabled() && !has_caret()) {
+    return 1; // also don't do anything if hotkeys are off and we don't have the caret
+  }
+
+  /*
+   * Then, check for the special case of a mouse up event.
+   * This should be more elegant.
+   */
   if (d.key_num == MOUSE_SELECT || d.key_num == MOUSE_ADJUST) {
     if (d.state == 0) {
       for (int i = 0; i < KEY_COUNT; i++) {
         if(keys_pressed[i] == 1) {
           keys_pressed[i] = 0;
-          tx_noteoff(60+i,velocity,octave); /* offset from base note */
+          tx_noteoff(60+i,velocity,octave); // offset from base note
         }
       }
     }
-    return 1; /* done here */
+    return 1; // done and handled
   }
 
+  /*
+   * Otherwise, check the key number and set the note accordingly
+   */
   switch (d.key_num) {
     case KEY_Q:
     	 component = Gadget_Keys_C1;
@@ -233,21 +262,17 @@ int key_pressed(WimpMessage *message, void *handle)
     	 note = 83;
     break;
     default:
-    	 return 1; /* unhandled key, just return */
+    	 return 1; // unhandled key, just return
     break;
   }
 
-  if (d.state == 0) {
-    /* key up */
-    /* Clear bit 21 (selected bit) for the given button */
+  if (d.state == 0) { // key up, clear bit 21 (selected bit) for the given button
     button_set_flags(0,window_id_piano,component,0x200000,0x0);
-    tx_noteoff(note,velocity,octave); /* send note off message */
+    tx_noteoff(note,velocity,octave); // send note off message for this note
   }
-  else {
-    /* key down */
-    /* Set bit 21 (selected bit) for the given button */
+  else { // key down, set bit 21 (selected bit) for the given button
     button_set_flags(0,window_id_piano,component,0x200000,0x200000);
-    tx_noteon(note,velocity,octave); /* send note on message */
+    tx_noteon(note,velocity,octave); // send note on message for this note
   }
 
   return 1;
@@ -259,57 +284,63 @@ int key_pressed(WimpMessage *message, void *handle)
 
    Additionally, attempt to grab the caret if the window doesn't have it already.
 */
+/*
+ * This handler is called on key clicks.
+ * This watches for mouse down clicks on the piano keys and responds.
+ * It also attempts to grab the caret if the window doesn't have it already.
+ * Warning: In order to make the code more succinct, this makes the assumption
+ * that the components have sequential IDs, which should be true but careful
+ * mucking around in the resource file then.
+ */
 int key_clicked(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
 {
   ObjectId window = id_block->self_id;
   ComponentId component = id_block->self_component;
   int window_handle_piano =-1;
-
   int note = 0;
   int octave = get_octave();
   int velocity = get_velocity();
 
-  /* Only pay attention if the click involves the piano window, since
-     this is actually a general handler for all Wimp button clicks */
-  if ((piano_opened == true) && (window == window_id_piano)) {
-    /* Attempt to gain caret */
+  if ((piano_opened == true) && (window == window_id_piano)) { // filter for piano win
     window_get_wimp_handle(0,window_id_piano,&window_handle_piano);
-    wimp_set_caret_position(window_handle_piano,-1,0,0,-1,-1);
+    wimp_set_caret_position(window_handle_piano,-1,0,0,-1,-1); // attempt to gain caret
 
-    if (component < KEY_COUNT && component >= 0) { /* only look at piano key buttons */
+    if (component < KEY_COUNT && component >= 0) { // filter for piano key buttons
       note = component + BASE_NOTE;
-      keys_pressed[component] = 1; /* mark key as pressed for mouseup */
-      tx_noteon(note,velocity,octave); /* send note on message */
+      keys_pressed[component] = 1; // mark key as pressed for mouseup
+      tx_noteon(note,velocity,octave); //send note on message
     }
   }
 
   return 1;
 }
 
-/* Another handler for Wimp_EMouseClick; this one doesn't claim the event so that key_clicked
-   can still handle. Is this safe? I'm not sure but it seems to work, and this is the less
-   important of the two so it's the one that doesn't claim. The purpose of this is to make
-   the pitch bend slider snap back to the center, as these controls usually do.
-
-   Currently, the mechanism for this is to release the slider and adjust click on it to reset.
-   This isn't ideal but while the slider is dragged, an adjust click won't be recognised,
-   so this is the best I can do for now. Maybe a better solution later?
-*/
+/*
+ * slider_snap
+ * Another handler for Wimp_EMouseClick; this one doesn't claim the event so that key_clicked
+ * can still handle. Is this safe? I'm not sure but it seems to work, and this is the less
+ * important of the two so it's the one that doesn't claim. The purpose of this is to make
+ * the pitch bend slider snap back to the center, as these controls usually do.
+ * Currently, the mechanism for this is to release the slider and adjust click on it to reset.
+ * This isn't ideal but while the slider is dragged, an adjust click won't be recognised,
+ * so this is the best I can do for now.
+ */
 int slider_snap(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
 {
   WimpMouseClickEvent *m = (WimpMouseClickEvent *)event;
 
-  /* Filter for the piano window's pitch bend, then filter for Adjust clicks */
-  if (piano_opened && id_block->parent_id == window_id_piano
-      && id_block->self_component == Gadget_Piano_PitchBend) {
+  if (piano_opened && id_block->parent_id == window_id_piano  // filter for pitch bend
+      && id_block->self_component == Gadget_Piano_PitchBend) { // then for adjust clicks
     if (m->buttons == 1) {
       int current_val;
       slider_get_value(0,id_block->self_id,Gadget_Piano_PitchBend,&current_val);
-      /* Only snap if it isn't already centered, or else nasty flickering will happen.
-      	 Ok, nasty flickering still happens if you drag, but this at least eliminates it when
-      	 the mouse is still. */
-      if (current_val != 8192) {
-        slider_set_value(0,id_block->self_id,Gadget_Piano_PitchBend,8192); /* 8192 = middle value */
+      /*
+       * Only snap if it isn't already centered, or else nasty flickering will happen.
+       * Ok, nasty flickering still happens if you drag, but this at least eliminates it when
+       * the mouse is still.
+       */
+      if (current_val != 8192) { // 8192 = middle value
+        slider_set_value(0,id_block->self_id,Gadget_Piano_PitchBend,8192);
       }
     }
   }
@@ -317,32 +348,38 @@ int slider_snap(int event_code, WimpPollBlock *event, IdBlock *id_block, void *h
   return 0;
 }
 
-/* Load Messages with MessageTrans. This one is a bit different because all the gadgets are on
-   toolbars. */
+/* load_messages_pianowin
+ * Loads Messages with MessageTrans. This one is a bit different because all the translatable
+ * gadgets are on toolbars.
+ */
 void load_messages_pianowin(void)
 {
-  /* Debug */
   _kernel_oserror *err;
-
-  /* Load Messages file and save pointer to control block */
-  msgs_init();
-  msgtrans_control_block *cb;
-  cb = msgs_main_control_block();
-
-  /* Get ObjectIds of the toolbars */
   ObjectId toolbar_id_h, toolbar_id_v;
+
+  msgs_init(); // load messages file
+  msgtrans_control_block *cb;
+  cb = msgs_main_control_block(); // save pointer to control block
+
+  /*
+   * Get ObjectIds of the toolbars
+   */
   window_get_tool_bars(0,window_id_piano,&toolbar_id_h,NULL,NULL,&toolbar_id_v);
 
-  /* Set gadget and window text */
-  err = window_set_title(0,window_id_piano,msgs_lookup("Piano|1:err")); /* window title */
+  /*
+   * Set gadget and window text
+   */
+  err = window_set_title(0,window_id_piano,msgs_lookup("Piano|1:err")); // window title
   button_set_value(0,toolbar_id_h,Gadget_Piano_VelLabel,
-  	     	   msgs_lookup("Piano|53:err")); /* piano velocity label */
+  	     	   msgs_lookup("Piano|53:err")); // piano velocity label
   button_set_value(0,toolbar_id_h,Gadget_Piano_OctLabel,
-  	     	   msgs_lookup("Piano|57:err")); /* piano octave label */
+  	     	   msgs_lookup("Piano|57:err")); // piano octave label
   optionbutton_set_label(0,toolbar_id_h,Gadget_Piano_TypeNotes,
-  	       	   msgs_lookup("Piano|51:err")); /* type notes option */
+  	       	   msgs_lookup("Piano|51:err")); // type notes option
 
-  /* Set help text */
+  /*
+   * Set help text
+   */
   gadget_set_help_message(0,toolbar_id_h,Gadget_Piano_TypeNotes,
   	     	  	  	msgs_lookup("Piano|50:Unable to get help."));
   gadget_set_help_message(0,toolbar_id_h,Gadget_Piano_Vel,
@@ -354,12 +391,13 @@ void load_messages_pianowin(void)
     report_printf("MidiMon: err in load_messages_pianowin - %d: %s",err->errnum,err->errmess);
   }
 
-  msgtrans_close_file(cb); /* close Messages file */
+  msgtrans_close_file(cb); // close Messages file
 }
 
-/* Local helper functions */
-
-/* Return 1 if hotkeys are enabled, 0 if disabled */
+/*
+ * hotkeys_enabled
+ * Return 1 if hotkeys are enabled, 0 if disabled.
+ */
 int hotkeys_enabled(void)
 {
   int state = 0;
@@ -369,29 +407,39 @@ int hotkeys_enabled(void)
   return state;
 }
 
-/* Returns the velocity. If anything goes wrong, returns max velocity. */
+/*
+ * get_velocity
+ * Returns the velocity from the velocity slider.
+ */
 int get_velocity(void)
 {
-  int velocity = 127;
+  int velocity;
   numberrange_get_value(0,tbar_id_h,Gadget_Piano_Vel,&velocity);
   return velocity;
 }
 
-/* Returns the octave. If anything goes wrong, returns 0. */
+/*
+ * get_octave
+ * Returns the octave from the octave slider.
+ */
 int get_octave(void)
 {
-  int octave = 0;
+  int octave;
   numberrange_get_value(0,tbar_id_h,Gadget_Piano_Oct,&octave);
   return octave;
 }
 
-/* Returns 1 if piano window has the caret , 0 otherwise. */
+/*
+ * has_caret
+ * Returns 1 if piano window has the caret, 0 otherwise.
+ */
 int has_caret(void)
 {
   _kernel_oserror *err = NULL;
+  WimpGetCaretPositionBlock *b; // in wimp.h
+  int window_handle_piano; // Wimp handle of piano window
+
   if (piano_opened) {
-    WimpGetCaretPositionBlock *b; /* in wimp.h */
-    int window_handle_piano =-1; /* Wimp handle of piano window */
     err = wimp_get_caret_position(b);
     window_get_wimp_handle(0,window_id_piano,&window_handle_piano);
     if (err != NULL) {

@@ -144,23 +144,15 @@ void register_handlers(void)
   event_register_toolbox_handler(-1,Event_Choices_Default,choices_default_button_click,NULL);
   event_register_toolbox_handler(-1,Event_Choices_Cancel,choices_cancel_button_click,NULL);
 
-  /* Toolbox events - Piano window */
-  event_register_toolbox_handler(-1,Slider_ValueChanged,slider_valuechange,NULL);
-
   /* Toolbox events - Iconbar */
   event_register_toolbox_handler(-1,Event_Iconbar_ShowHelp,show_help,NULL);
   event_register_toolbox_handler(-1,Event_Iconbar_DeviceSelect,device_selection,NULL);
   event_register_toolbox_handler(-1,Event_Iconbar_Panic,midi_panic,NULL);
   event_register_toolbox_handler(-1,Event_Iconbar_ShowDevMenu,update_devices_menu,NULL);
 
-  /* Wimp events */
-  event_register_wimp_handler(-1,Wimp_EMouseClick,key_clicked,0);
-  event_register_wimp_handler(-1,Wimp_EMouseClick,slider_snap,0);
-
   /* Wimp messages */
   event_register_message_handler(Wimp_MQuit,quit_message,0);
   event_register_message_handler(Wimp_MPreQuit,quit_message,0);
-  event_register_message_handler(Message_KeyEvent,key_pressed,0);
   event_register_message_handler(Message_MIDIDataReceived,handle_incoming,0);
   event_register_message_handler(Message_MIDIError,midi_error,0);
   event_register_message_handler(Message_MIDIInit,midi_initialised,0);
