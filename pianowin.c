@@ -58,9 +58,41 @@ typedef struct KeyUpMessage {
   KeyUpData key_data;
 } KeyUpMessage;
 
-/* Globals and constants */
 #define KEY_COUNT   24
 #define BASE_NOTE   60 // Note number of the lowest C on the piano
+#define Gadget_Keys_C1			0x00
+#define Gadget_Keys_Db1			0x01
+#define Gadget_Keys_D1			0x02
+#define Gadget_Keys_Eb1			0x03
+#define Gadget_Keys_E1			0x04
+#define Gadget_Keys_F1			0x05
+#define Gadget_Keys_Gb1			0x06
+#define Gadget_Keys_G1			0x07
+#define Gadget_Keys_Ab1			0x08
+#define Gadget_Keys_A1			0x09
+#define Gadget_Keys_Bb1			0x0A
+#define Gadget_Keys_B1			0x0B
+#define Gadget_Keys_C2			0x0C
+#define Gadget_Keys_Db2			0x0D
+#define Gadget_Keys_D2			0x0E
+#define Gadget_Keys_Eb2			0x0F
+#define Gadget_Keys_E2			0x10
+#define Gadget_Keys_F2			0x11
+#define Gadget_Keys_Gb2			0x12
+#define Gadget_Keys_G2			0x13
+#define Gadget_Keys_Ab2			0x14
+#define Gadget_Keys_A2			0x15
+#define Gadget_Keys_Bb2			0x16
+#define Gadget_Keys_B2			0x17
+#define Gadget_Piano_TypeNotes		0x04 // on horizontal toolbar
+#define Gadget_Piano_Vel		0x05 // on horizontal toolbar
+#define Gadget_Piano_Oct		0x01 // on horizontal toolbar
+#define Gadget_Piano_VelLabel		0x03 // on horizontal toolbar
+#define Gadget_Piano_OctLabel		0x02 // on horizontal toolbar
+#define Gadget_Piano_PitchBend		0x00 // on vertical toolbar
+#define Gadget_Piano_PitchLabel		0x01 // on vertical toolbar
+
+
 static ObjectId window_id_piano; // piano window's ObjectId
 static ObjectId tbar_id_h; // horizontal toolbar's ObjectId
 static ObjectId tbar_id_v; // vertical toolbar's ObjectId

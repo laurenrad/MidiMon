@@ -45,6 +45,14 @@
 #include "midi.h"
 #include "preporter.h"
 
+/* Gadgets: Monitor window gadgets */
+#define Gadget_Monitor_ScrollList       0x00
+#define Gadget_Monitor_DeviceDisplay	0x04
+#define Gadget_Monitor_DeviceLabel	0x05
+#define MenuEntry_Monitor_Save		0x02
+#define MenuEntry_Monitor_Selection	0x05
+
+
 static ObjectId window_id_main; // Toolbox Object ID of monitor window
 static bool monitor_opened = false; // Track if the window has been opened yet
 

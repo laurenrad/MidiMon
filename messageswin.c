@@ -36,7 +36,22 @@
 #include "midi.h"
 #include "preporter.h"
 
-/* Globals */
+#define Gadget_Msg_ProgChgStr		0x02 // StringSet: GM program names
+#define Gadget_Msg_ProgChgSend		0x07 // Program Change Send button
+#define Gadget_Msg_ProgChgNum		0x13 // Program Change numberrange
+#define Gadget_Msg_CntlrLabel		0x0A // Label: "Controller" (actually a button)
+#define Gadget_Msg_ValueLabel		0x10 // Label: "Value" (actually a button)
+#define Gadget_Msg_CtrlChgSend		0x0B // control change send button
+#define Gadget_Msg_CtrlChgCntlr		0x0C
+#define Gadget_Msg_CtrlChgVal		0x0D
+#define Gadget_Msg_CtrlChgLblBox	0x18 // Control change box label (actually a button)
+#define Gadget_Msg_ProgChgLblBox	0x19 // Program change box label (actually a button)
+#define Gadget_Msg_TuneReq		0x09 // Send tune request button
+#define Gadget_Msg_SysReset		0x15 // Send system reset button
+#define Gadget_Msg_TuneReqLabel		0x16 // Label: "Tune Request" (actually a button)
+#define Gadget_Msg_SysResetLabel	0x17 // Label: "System Reset" (actually a button)
+#define Gadget_Msg_MiscLblBox		0x1A // Label: "Misc" (actually a button)
+
 static ObjectId window_id_messages = -1;
 static bool messages_opened = false;    // Track if we know the window ID yet
 

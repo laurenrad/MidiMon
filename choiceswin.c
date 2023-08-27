@@ -39,6 +39,16 @@
 #include "choiceswin.h"
 #include "midi.h"
 
+#define Gadget_Choices_TxChan		0x00 // tx channel number range
+#define Gadget_Choices_TxChanLabel	0x01 // label: "Tx Channel" (actually a button)
+#define Gadget_Choices_AltNoteOff	0x02 // alt note off option button
+#define Gadget_Choices_IgnoreClock	0x03 // ignore clock option button
+#define Gadget_Choices_FakeFastClock	0x04 // fake fast clock option button
+#define Gadget_Choices_DefaultButton	0x05 // default action button
+#define Gadget_Choices_SaveButton	0x06 // save action button
+#define Gadget_Choices_CancelButton	0x07 // cancel action button
+#define Gadget_Choices_SetButton	0x08 // set action button
+
 static ObjectId window_id_choices;
 static bool choices_opened = false;
 

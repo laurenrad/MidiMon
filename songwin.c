@@ -36,6 +36,13 @@
 #include "preporter.h"
 #include "songwin.h"
 
+#define Gadget_Song_Start	  	0x00 // Start button
+#define Gadget_Song_Continue		0x01 // Continue button
+#define Gadget_Song_Stop		0x02 // Stop button
+#define Gadget_Song_SongNumLabel	0x03 // Song Select label text
+#define Gadget_Song_SongNum	  	0x04 // Number range for song select
+#define Gadget_Song_SongSelSend		0x05 // Song select send
+
 static ObjectId window_id_song; // ObjectId of this window
 static bool song_opened = false; // Track if window_id_song is known
 
