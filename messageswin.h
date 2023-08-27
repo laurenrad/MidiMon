@@ -18,18 +18,15 @@
  * File: messageswin.h
  * Author: Lauren Rad
  * Purpose: Handlers for the Send Messages window. (Header)
-*/
+ */
 
 #ifndef MIDIMON_MESSAGESWIN_H
 #define MIDIMON_MESSAGESWIN_H
 
-/* Functions */
+/*
+ * Handler to register for the Send messages window to be shown. It will do the rest of the
+ * setup itself.
+ */
 int window_messages_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int stringset_programchg(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int button_progchgsend(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int button_txcntrlchg(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int button_txtunereq(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int button_txsysreset(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-void load_messages_messageswin(void);
 
 #endif

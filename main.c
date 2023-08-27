@@ -128,13 +128,6 @@ void register_handlers(void)
   event_register_toolbox_handler(-1,Event_Windows_ShowMessages,window_messages_onshow,NULL);
   event_register_toolbox_handler(-1,Event_Windows_ShowSong,window_song_onshow,NULL);
 
-  /* Toolbox events - Send Messages window */
-  event_register_toolbox_handler(-1,Event_Msg_SendProgChg,button_progchgsend,NULL);
-  event_register_toolbox_handler(-1,Event_Msg_TxCntrlChg,button_txcntrlchg,NULL);
-  event_register_toolbox_handler(-1,Event_Msg_TxTuneReq,button_txtunereq,NULL);
-  event_register_toolbox_handler(-1,Event_Msg_TxSysReset,button_txsysreset,NULL);
-  event_register_toolbox_handler(-1,StringSet_ValueChanged,stringset_programchg,NULL);
-
   /* Toolbox events - Song Control window */
   event_register_toolbox_handler(-1,Event_Song_Start,button_songstart,NULL);
   event_register_toolbox_handler(-1,Event_Song_Continue,button_songcontinue,NULL);
