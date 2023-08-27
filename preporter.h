@@ -30,7 +30,7 @@ here are some quick and dirty wrapper functions for Reporter SWIs.
 #define BUFSIZE 1000
 static char _reporter_buf[BUFSIZE];
 
-#define Error_UnknownSWI        0x1E6 /* Error for try_reporter */
+#define Error_UnknownSWI        0x1E6 // Error for try_reporter
 
 /* Define SWI numbers - not all are implemented*/
 /* Reporting SWIs */
@@ -41,7 +41,7 @@ static char _reporter_buf[BUFSIZE];
 #define Report_Where		0x054C84
 #define Report_Poll		0x054C85
 #define Report_Dump		0x054C86
-#define	Report_GetSwiRet	0x054C87
+#define Report_GetSwiRet	0x054C87
 #define Report_ErrBlk		0x054C88
 
 /* Controlling SWIs */

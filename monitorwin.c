@@ -54,7 +54,6 @@ int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *
 int test_button_click(int event_code,ToolboxEvent *event,IdBlock *id_block, void *handle);
 void load_messages_monitorwin(void);
 
-/* Called when the monitor window is shown. Save ObjectId, load messages, set defaults */
 /*
  * window_monitor_onshow
  * This handler is called when the Monitor window is shown.
@@ -252,7 +251,6 @@ void update_device_display(void)
  */
 int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  /* note that asctime will add a newline, but oh well */
   time_t t;
   t = time(NULL);
   struct tm *local = localtime(&t);

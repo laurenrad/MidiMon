@@ -27,16 +27,15 @@
 #include "choices.h"
 #include "event.h"
 
-
-int choices_set_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int choices_save_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int choices_default_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int choices_cancel_button_click(int event_code, ToolboxEvent *event, IdBlock *d_block, void *handle);
+/*
+ * window_choices_onshow
+ * This handler is called when the Choices window is shown.
+ */
 int window_choices_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-void debug_print_choices(Choices *const c);
+
+/*
+ * Make certain current choices take effect immediately.
+ */
 void action_choices(Choices *const c);
-void refresh_gadgets(Choices c, IdBlock *id_block);
-void store_gadgets(Choices *c, IdBlock *id_block);
-void load_messages_choiceswin(void);
 
 #endif

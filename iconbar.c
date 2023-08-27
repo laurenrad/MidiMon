@@ -20,7 +20,6 @@
  * Description: Handlers for Iconbar icon and associated menus.
 */
 
-// System and Toolbox stuff
 #include "kernel.h"
 #include "swis.h"
 #include "toolbox.h"
@@ -66,10 +65,6 @@ int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block, voi
   return 1;
 }
 
-/* Devices menu shown - enable/disable based on available devices.
-   The mod documentation isn't clear but this is making the assumption that
-   available devices are contiguous, since there is no 'official' way
-   to check anything other than the number of devices currently. */
 /*
  * update_devices_menu
  * This handler is called when the device menu is shown.

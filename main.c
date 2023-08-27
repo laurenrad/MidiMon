@@ -48,106 +48,20 @@
 #include "songwin.h"
 #include "iconbar.h"
 
-/* Globals and constants */
 #define WimpVersion	310
 struct Choices global_choices;
 int device_num = -1; // device number, numbered 0-3
-
-/* Static Globals */
 static WimpPollBlock poll_block;
 static MessagesFD messages;
 static IdBlock id_block;
 static int quit = 0;
 
+int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int quit_event(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int show_help(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int quit_message(WimpMessage *message, void *handle);
 void register_handlers(void);
-int tbox_error_handler(int event_code, ToolboxEvent *event,
-    	       	       IdBlock *id_block, void *handle);
-
-/*
- * quit_event
- * This handler is called when the Quit item is selected from the Iconbar menu.
- */
-int quit_event(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
-{
-  quit = 1;
-  return 1;
-}
-
-/*
- * quit_message
- * This handler is called for Wimp Quit or PreQuit messages.
-*/
-int quit_message(WimpMessage *message, void *handle)
-{
-  quit = 1;
-  return 1;
-}
-
-/*
- * show_help
- * This handler is called when the Help... option is selected from the Iconbar menu.
- * It opens the help file.
- */
-int show_help(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
-{
-  system("Filer_Run <MidiMon$Dir>.!Help");
-
-  return 1;
-}
-
-/*
- * tbox_error_handler
- * This handler is called on Toolbox error events.
- */
-int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
-{
-  ToolboxErrorEvent *e = (ToolboxErrorEvent *)event;
-
-#ifdef REPORTER_DEBUG
-  report_printf("MidiMon: A toolbox error occurred: %d %s",e->errnum,e->errmess);
-#endif
-
-  return 1;
-}
-
-/*
- * register_handlers
- * Registers various event handlers for the application.
- */
-void register_handlers(void)
-{
-  /* Generic Toolbox events */
-  event_register_toolbox_handler(-1,1,quit_event,NULL);
-  event_register_toolbox_handler(-1,Toolbox_Error,tbox_error_handler,NULL);
-
-  /* Toolbox events - window shown */
-  event_register_toolbox_handler(-1,Event_Windows_ShowChoices,window_choices_onshow,NULL);
-  event_register_toolbox_handler(-1,Event_Windows_ShowMonitor,window_monitor_onshow,NULL);
-  event_register_toolbox_handler(-1,Event_Windows_ShowPiano,window_piano_onshow,NULL);
-  event_register_toolbox_handler(-1,Event_Windows_ShowMessages,window_messages_onshow,NULL);
-  event_register_toolbox_handler(-1,Event_Windows_ShowSong,window_song_onshow,NULL);
-
-  /* Toolbox events - Choices window */
-  event_register_toolbox_handler(-1,Event_Choices_Set,choices_set_button_click,NULL);
-  event_register_toolbox_handler(-1,Event_Choices_Save,choices_save_button_click,NULL);
-  event_register_toolbox_handler(-1,Event_Choices_Default,choices_default_button_click,NULL);
-  event_register_toolbox_handler(-1,Event_Choices_Cancel,choices_cancel_button_click,NULL);
-
-  /* Toolbox events - Iconbar */
-  event_register_toolbox_handler(-1,Event_Iconbar_ShowHelp,show_help,NULL);
-  event_register_toolbox_handler(-1,Event_Iconbar_DeviceSelect,device_selection,NULL);
-  event_register_toolbox_handler(-1,Event_Iconbar_Panic,midi_panic,NULL);
-  event_register_toolbox_handler(-1,Event_Iconbar_ShowDevMenu,update_devices_menu,NULL);
-
-  /* Wimp messages */
-  event_register_message_handler(Wimp_MQuit,quit_message,0);
-  event_register_message_handler(Wimp_MPreQuit,quit_message,0);
-  event_register_message_handler(Message_MIDIError,midi_error,0);
-  event_register_message_handler(Message_MIDIInit,midi_initialised,0);
-  event_register_message_handler(Message_MIDIDying,midi_dying,0);
-  event_register_message_handler(Message_MIDIDevConnect,midi_dev_connected,0);
-  event_register_message_handler(Message_MIDIDevDisconnect,midi_dev_disconnected,0);
-}
 
 int main(void)
 {
@@ -220,4 +134,83 @@ int main(void)
 
   exit(EXIT_SUCCESS);
 
+}
+
+/*
+ * quit_event
+ * This handler is called when the Quit item is selected from the Iconbar menu.
+ */
+int quit_event(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+  quit = 1;
+  return 1;
+}
+
+/*
+ * quit_message
+ * This handler is called for Wimp Quit or PreQuit messages.
+*/
+int quit_message(WimpMessage *message, void *handle)
+{
+  quit = 1;
+  return 1;
+}
+
+/*
+ * show_help
+ * This handler is called when the Help... option is selected from the Iconbar menu.
+ * It opens the help file.
+ */
+int show_help(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+  system("Filer_Run <MidiMon$Dir>.!Help");
+
+  return 1;
+}
+
+/*
+ * tbox_error_handler
+ * This handler is called on Toolbox error events.
+ */
+int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+  ToolboxErrorEvent *e = (ToolboxErrorEvent *)event;
+
+#ifdef REPORTER_DEBUG
+  report_printf("MidiMon: A toolbox error occurred: %d %s",e->errnum,e->errmess);
+#endif
+
+  return 1;
+}
+
+/*
+ * register_handlers
+ * Registers various event handlers for the application.
+ */
+void register_handlers(void)
+{
+  /* Generic Toolbox events */
+  event_register_toolbox_handler(-1,1,quit_event,NULL);
+  event_register_toolbox_handler(-1,Toolbox_Error,tbox_error_handler,NULL);
+
+  /* Toolbox events - window shown */
+  event_register_toolbox_handler(-1,Event_Windows_ShowChoices,window_choices_onshow,NULL);
+  event_register_toolbox_handler(-1,Event_Windows_ShowMonitor,window_monitor_onshow,NULL);
+  event_register_toolbox_handler(-1,Event_Windows_ShowPiano,window_piano_onshow,NULL);
+  event_register_toolbox_handler(-1,Event_Windows_ShowMessages,window_messages_onshow,NULL);
+  event_register_toolbox_handler(-1,Event_Windows_ShowSong,window_song_onshow,NULL);
+
+  /* Toolbox events - Iconbar */
+  event_register_toolbox_handler(-1,Event_Iconbar_ShowHelp,show_help,NULL);
+  event_register_toolbox_handler(-1,Event_Iconbar_DeviceSelect,device_selection,NULL);
+  event_register_toolbox_handler(-1,Event_Iconbar_Panic,midi_panic,NULL);
+  event_register_toolbox_handler(-1,Event_Iconbar_ShowDevMenu,update_devices_menu,NULL);
+
+  /* Wimp messages */
+  event_register_message_handler(Wimp_MQuit,quit_message,0);
+  event_register_message_handler(Wimp_MPreQuit,quit_message,0);
+  event_register_message_handler(Message_MIDIError,midi_error,0);
+  event_register_message_handler(Message_MIDIDying,midi_dying,0);
+  event_register_message_handler(Message_MIDIDevConnect,midi_dev_connected,0);
+  event_register_message_handler(Message_MIDIDevDisconnect,midi_dev_disconnected,0);
 }

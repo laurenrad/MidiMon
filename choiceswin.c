@@ -23,26 +23,32 @@
 // Library stuff
 #include <stdbool.h>
 
-// RISC OS stuff
 #include "kernel.h"
 #include "swis.h"
 #include "event.h"
 #include "toolbox.h"
 #include "gadgets.h"
 #include "window.h"
-#include "msgs.h" // This and msgtrans are RISC_OSLib stuff
+#include "msgs.h" // RISC_OSLib
 #include "msgtrans.h"
 
-// My stuff
+// MidiMon stuff
 #include "choices.h"
 #include "preporter.h"
 #include "common.h"
 #include "choiceswin.h"
 #include "midi.h"
 
-// Globals
 static ObjectId window_id_choices;
 static bool choices_opened = false;
+
+int choices_set_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int choices_save_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int choices_default_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int choices_cancel_button_click(int event_code, ToolboxEvent *event, IdBlock *d_block, void *handle);
+void refresh_gadgets(Choices c, IdBlock *id_block);
+void store_gadgets(Choices *c, IdBlock *id_block);
+void load_messages_choiceswin(void);
 
 /*
  * window_choices_onshow
@@ -58,6 +64,10 @@ int window_choices_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block
         load_messages_choiceswin(); // load messages
     }
     refresh_gadgets(global_choices, id_block); // sync gadgets with choices
+    event_register_toolbox_handler(-1,Event_Choices_Set,choices_set_button_click,NULL);
+    event_register_toolbox_handler(-1,Event_Choices_Save,choices_save_button_click,NULL);
+    event_register_toolbox_handler(-1,Event_Choices_Default,choices_default_button_click,NULL);
+    event_register_toolbox_handler(-1,Event_Choices_Cancel,choices_cancel_button_click,NULL);
 
     return 1;
 }

@@ -48,9 +48,9 @@ tried to make paths this long to test, the filer died horribly anyway */
 /* This will be appended to Choices$Path or Choices$Write */
 #define LEAFNAME	"MidiMon"
 
-Choices init_choices(void); /* provide default choices */
-int load_choices(void); /* load choices from file */
-int save_choices(void); /* save choices to file */
-FILE *openin_choices(char *choices_path_env); /* open choices file for reading */
+Choices init_choices(void); // provide default choices
+int load_choices(void); // load choices from file
+int save_choices(void); // save choices to file
+FILE *openin_choices(char *choices_path_env); // open choices file for reading
 
 #endif
