@@ -20,7 +20,6 @@
  * Purpose: Handlers for the messages window.
 */
 
-
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -29,8 +28,8 @@
 #include "window.h"
 #include "wimp.h"
 #include "event.h"
-#include "msgs.h" // RISC_OSLib
-#include "msgtrans.h" //RISC_OSLib
+#include "msgs.h"               // RISC_OSLib
+#include "msgtrans.h"           // RISC_OSLib
 
 #include "messageswin.h"
 #include "common.h"
@@ -39,7 +38,7 @@
 
 /* Globals */
 static ObjectId window_id_messages = -1;
-static bool messages_opened = false; /* Track if we know the window ID yet */
+static bool messages_opened = false;    // Track if we know the window ID yet
 
 void load_messages_messageswin(void);
 int stringset_programchg(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
@@ -54,20 +53,20 @@ int button_txsysreset(int event_code, ToolboxEvent *event, IdBlock *id_block, vo
  * On the first time the window is seen, this registers handlers, saves the ObjectId,
  * and does any miscellaneous first-time setup that may be needed.
  */
-int window_messages_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+int window_messages_onshow(int event_code, ToolboxEvent * event, IdBlock * id_block, void *handle)
 {
-  if (messages_opened == false) {
-    messages_opened = true;
-    window_id_messages = id_block->self_id;
-    load_messages_messageswin();
-    event_register_toolbox_handler(-1,Event_Msg_SendProgChg,button_progchgsend,NULL);
-    event_register_toolbox_handler(-1,Event_Msg_TxCntrlChg,button_txcntrlchg,NULL);
-    event_register_toolbox_handler(-1,Event_Msg_TxTuneReq,button_txtunereq,NULL);
-    event_register_toolbox_handler(-1,Event_Msg_TxSysReset,button_txsysreset,NULL);
-    event_register_toolbox_handler(-1,StringSet_ValueChanged,stringset_programchg,NULL);
-  }
+    if (messages_opened == false) {
+        messages_opened = true;
+        window_id_messages = id_block->self_id;
+        load_messages_messageswin();
+        event_register_toolbox_handler(-1, Event_Msg_SendProgChg, button_progchgsend, NULL);
+        event_register_toolbox_handler(-1, Event_Msg_TxCntrlChg, button_txcntrlchg, NULL);
+        event_register_toolbox_handler(-1, Event_Msg_TxTuneReq, button_txtunereq, NULL);
+        event_register_toolbox_handler(-1, Event_Msg_TxSysReset, button_txsysreset, NULL);
+        event_register_toolbox_handler(-1, StringSet_ValueChanged, stringset_programchg, NULL);
+    }
 
-  return 1;
+    return 1;
 }
 
 /*
@@ -77,17 +76,18 @@ int window_messages_onshow(int event_code, ToolboxEvent *event, IdBlock *id_bloc
  */
 int stringset_programchg(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  if (id_block->self_id == window_id_messages && id_block->self_component == Gadget_Msg_ProgChgStr) {
-    int index;
+    if (id_block->self_id == window_id_messages
+        && id_block->self_component == Gadget_Msg_ProgChgStr) {
+        int index;
 
-    // This event only gives the string, not the index, so get it.
-    stringset_get_selected(1,window_id_messages,Gadget_Msg_ProgChgStr,&index);
-    // Set the number range as this is what will be read when sending the message.
-    numberrange_set_value(0,window_id_messages,Gadget_Msg_ProgChgNum,index);
-  } else {
-    return 0; // this wasn't for this window, so return unhandled.
-  }
-  return 1;
+        // This event only gives the string, not the index, so get it.
+        stringset_get_selected(1, window_id_messages, Gadget_Msg_ProgChgStr, &index);
+        // Set the number range as this is what will be read when sending the message.
+        numberrange_set_value(0, window_id_messages, Gadget_Msg_ProgChgNum, index);
+    } else {
+        return 0;               // this wasn't for this window, so return unhandled.
+    }
+    return 1;
 }
 
 /*
@@ -98,12 +98,12 @@ int stringset_programchg(int event_code, ToolboxEvent *event, IdBlock *id_block,
  */
 int button_progchgsend(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  int prog = 0;
+    int prog = 0;
 
-  numberrange_get_value(0,window_id_messages,Gadget_Msg_ProgChgNum,&prog);
-  tx_progchg(prog);
+    numberrange_get_value(0, window_id_messages, Gadget_Msg_ProgChgNum, &prog);
+    tx_progchg(prog);
 
-  return 1;
+    return 1;
 }
 
 /*
@@ -114,14 +114,14 @@ int button_progchgsend(int event_code, ToolboxEvent *event, IdBlock *id_block, v
  */
 int button_txcntrlchg(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  int control = 0; // Controller number
-  int value = 0; // Value to send
+    int control = 0;            // Controller number
+    int value = 0;              // Value to send
 
-  numberrange_get_value(0,window_id_messages,Gadget_Msg_CtrlChgCntlr,&control);
-  numberrange_get_value(0,window_id_messages,Gadget_Msg_CtrlChgVal,&value);
-  tx_controlchg(control, value);
+    numberrange_get_value(0, window_id_messages, Gadget_Msg_CtrlChgCntlr, &control);
+    numberrange_get_value(0, window_id_messages, Gadget_Msg_CtrlChgVal, &value);
+    tx_controlchg(control, value);
 
-  return 1;
+    return 1;
 }
 
 /*
@@ -131,8 +131,8 @@ int button_txcntrlchg(int event_code, ToolboxEvent *event, IdBlock *id_block, vo
 */
 int button_txtunereq(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  tx_tunereq();
-  return 1;
+    tx_tunereq();
+    return 1;
 }
 
 /*
@@ -142,8 +142,8 @@ int button_txtunereq(int event_code, ToolboxEvent *event, IdBlock *id_block, voi
  */
 int button_txsysreset(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  tx_sysreset();
-  return 1;
+    tx_sysreset();
+    return 1;
 }
 
 /*
@@ -154,63 +154,70 @@ int button_txsysreset(int event_code, ToolboxEvent *event, IdBlock *id_block, vo
 */
 void load_messages_messageswin(void)
 {
-  _kernel_oserror *err;
+    _kernel_oserror *err;
 
-  msgs_init(); // msgs_readfile(s) just ignores parameter and calls msgs_init()...
-  msgtrans_control_block *cb;
-  cb = msgs_main_control_block(); // save pointer to control block
+    msgs_init();                // msgs_readfile(s) just ignores parameter and calls msgs_init()...
+    msgtrans_control_block *cb;
+    cb = msgs_main_control_block();     // save pointer to control block
 
-  /* Window and gadget text */
-  err = window_set_title(0,window_id_messages,msgs_lookup("Messages|1:err")); // window title
-  actionbutton_set_text(0,window_id_messages,Gadget_Msg_TuneReq,
-  	       	   	msgs_lookup("Messages|8:err")); // Tune Req send button
-  actionbutton_set_text(0,window_id_messages,Gadget_Msg_SysReset,
-  	       	   	msgs_lookup("Messages|8:err")); // Sys Reset send button
-  actionbutton_set_text(0,window_id_messages,Gadget_Msg_ProgChgSend,
-  	       	   	msgs_lookup("Messages|8:err")); // Prog Chg send button
-  actionbutton_set_text(0,window_id_messages,Gadget_Msg_CtrlChgSend,
-  	       	   	msgs_lookup("Messages|8:err")); // ctrl chg send button
-  button_set_value(0,window_id_messages,Gadget_Msg_CntlrLabel,
-  	     	     	msgs_lookup("Messages|20:err")); // label: "Controller"
-  button_set_value(0,window_id_messages,Gadget_Msg_ValueLabel,
-  	     	     	msgs_lookup("Messages|22:err")); // label: "Value"
-  button_set_value(0,window_id_messages,Gadget_Msg_TuneReqLabel,
-  	     	     	msgs_lookup("Messages|10:err")); // label: "Tune Request"
-  button_set_value(0,window_id_messages,Gadget_Msg_SysResetLabel,
-  	     	     	msgs_lookup("Messages|29:err")); // label: "System Reset"
-  /* Here are the buttons I've used to replace the unchangable label box text. This still isn't
-     ideal as the spacing on the label box will be static, but it will do for now. */
-  button_set_value(0,window_id_messages,Gadget_Msg_CtrlChgLblBox,
-  	     	   msgs_lookup("Messages|18:err")); // label: "Control Change"
-  button_set_value(0,window_id_messages,Gadget_Msg_ProgChgLblBox,
-  	     	   msgs_lookup("Messages|24:err")); // label: "Program Change"
-  button_set_value(0,window_id_messages,Gadget_Msg_MiscLblBox,
-  	     	   msgs_lookup("Messages|26:err")); // label: "Misc"
-  // TODO: how to handle default string set text?
-  stringset_set_available(0,window_id_messages,Gadget_Msg_ProgChgStr,
-  	    		  msgs_lookup("Messages|31:Unable to read Messages file."));
+    /*
+     * Window and gadget text
+     */
+    err = window_set_title(0, window_id_messages, msgs_lookup("Messages|1:err")); // window title
+    actionbutton_set_text(0, window_id_messages, Gadget_Msg_TuneReq,
+                          msgs_lookup("Messages|8:err")); // Tune Req send button
+    actionbutton_set_text(0, window_id_messages, Gadget_Msg_SysReset,
+                          msgs_lookup("Messages|8:err")); // Sys Reset send button
+    actionbutton_set_text(0, window_id_messages, Gadget_Msg_ProgChgSend,
+                          msgs_lookup("Messages|8:err")); // Prog Chg send button
+    actionbutton_set_text(0, window_id_messages, Gadget_Msg_CtrlChgSend,
+                          msgs_lookup("Messages|8:err")); // ctrl chg send button
+    button_set_value(0, window_id_messages, Gadget_Msg_CntlrLabel,
+                     msgs_lookup("Messages|20:err"));     // label: "Controller"
+    button_set_value(0, window_id_messages, Gadget_Msg_ValueLabel,
+                     msgs_lookup("Messages|22:err"));     // label: "Value"
+    button_set_value(0, window_id_messages, Gadget_Msg_TuneReqLabel,
+                     msgs_lookup("Messages|10:err"));   // label: "Tune Request"
+    button_set_value(0, window_id_messages, Gadget_Msg_SysResetLabel,
+                     msgs_lookup("Messages|29:err"));  // label: "System Reset"
+    /*
+     * Here are the buttons I've used to replace the unchangable label box text. This still isn't
+     * ideal as the spacing on the label box will be static, but it will do for now.
+     */
+    button_set_value(0, window_id_messages, Gadget_Msg_CtrlChgLblBox,
+                     msgs_lookup("Messages|18:err"));  // label: "Control Change"
+    button_set_value(0, window_id_messages, Gadget_Msg_ProgChgLblBox,
+                     msgs_lookup("Messages|24:err"));  // label: "Program Change"
+    button_set_value(0, window_id_messages, Gadget_Msg_MiscLblBox,
+                     msgs_lookup("Messages|26:err"));     // label: "Misc"
+    // TODO: how to handle default string set text?
+    stringset_set_available(0, window_id_messages, Gadget_Msg_ProgChgStr,
+                            msgs_lookup("Messages|31:Unable to read Messages file."));
 
-  /* Help text */
-  gadget_set_help_message(0,window_id_messages,Gadget_Msg_ProgChgStr,
-  	     	  	  msgs_lookup("Messages|2:Unable to get help.")); // prog string set
-  gadget_set_help_message(0,window_id_messages,Gadget_Msg_ProgChgSend,
-  	     	  	  msgs_lookup("Messages|7:Unable to get help.")); //* prog chg send
-  gadget_set_help_message(0,window_id_messages,Gadget_Msg_CtrlChgSend,
-  	     	  	  msgs_lookup("Messages|13:Unable to get help.")); // ctrl chg send
-  gadget_set_help_message(0,window_id_messages,Gadget_Msg_TuneReq,
-  	     	  	  msgs_lookup("Messages|11:Unable to get help.")); // tune req send
-  gadget_set_help_message(0,window_id_messages,Gadget_Msg_SysReset,
-  	     	  	  msgs_lookup("Messages|30:Unable to get help.")); // sys reset send
-  gadget_set_help_message(0,window_id_messages,Gadget_Msg_CtrlChgCntlr,
-  	     	  	  msgs_lookup("Messages|15:Unable to get help.")); // controller num
-  gadget_set_help_message(0,window_id_messages,Gadget_Msg_CtrlChgVal,
-  	     	  	  msgs_lookup("Messages|16:Unable to get help.")); // controller val
-  gadget_set_help_message(0,window_id_messages,Gadget_Msg_ProgChgNum,
-  	     	  	  msgs_lookup("Messages|27:Unable to get help.")); // program num
+    /*
+     * Help text
+     */
+    gadget_set_help_message(0, window_id_messages, Gadget_Msg_ProgChgStr,
+                            msgs_lookup("Messages|2:Unable to get help."));  // prog string set
+    gadget_set_help_message(0, window_id_messages, Gadget_Msg_ProgChgSend,
+                            msgs_lookup("Messages|7:Unable to get help."));  // prog chg send
+    gadget_set_help_message(0, window_id_messages, Gadget_Msg_CtrlChgSend,
+                            msgs_lookup("Messages|13:Unable to get help.")); // ctrl chg send
+    gadget_set_help_message(0, window_id_messages, Gadget_Msg_TuneReq,
+                            msgs_lookup("Messages|11:Unable to get help.")); // tune req send
+    gadget_set_help_message(0, window_id_messages, Gadget_Msg_SysReset,
+                            msgs_lookup("Messages|30:Unable to get help.")); // sys reset send
+    gadget_set_help_message(0, window_id_messages, Gadget_Msg_CtrlChgCntlr,
+                            msgs_lookup("Messages|15:Unable to get help.")); // controller num
+    gadget_set_help_message(0, window_id_messages, Gadget_Msg_CtrlChgVal,
+                            msgs_lookup("Messages|16:Unable to get help.")); // controller val
+    gadget_set_help_message(0, window_id_messages, Gadget_Msg_ProgChgNum,
+                            msgs_lookup("Messages|27:Unable to get help.")); // program num
 
-  if (err != NULL) {
-    report_printf("MidiMon: err in load_messages_messagewin - %d: %s",err->errnum,err->errmess);
-  }
+    if (err != NULL) {
+        report_printf("MidiMon: err in load_messages_messagewin - %d: %s", err->errnum,
+                      err->errmess);
+    }
 
-  msgtrans_close_file(cb); // close Messages file
+    msgtrans_close_file(cb);    // close Messages file
 }
