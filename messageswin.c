@@ -20,21 +20,17 @@
  * Purpose: Handlers for the messages window.
 */
 
-/* Library includes */
+
 #include <stdbool.h>
 #include <stdlib.h>
 
-/* Toolbox includes */
 #include "toolbox.h"
 #include "gadgets.h"
 #include "window.h"
 #include "wimp.h"
+#include "msgs.h" // RISC_OSLib
+#include "msgtrans.h" //RISC_OSLib
 
-/* RISC_OSLib headers for MessageTrans lookup */
-#include "msgs.h"
-#include "msgtrans.h"
-
-/* MidiMon Includes */
 #include "messageswin.h"
 #include "common.h"
 #include "midi.h"
@@ -44,7 +40,11 @@
 static ObjectId window_id_messages = -1;
 static bool messages_opened = false; /* Track if we know the window ID yet */
 
-/* When the Send Messages window is shown, save its ObjectId */
+/*
+ * window_messages_onshow
+ * This handler is called when the Send Messages window is shown.
+ * This does any first-time setup that may be needed and saves its ObjectId.
+ */
 int window_messages_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
   if (messages_opened == false) {

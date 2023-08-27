@@ -24,13 +24,13 @@
 #include <string.h>
 #include <stdlib.h>
 
-/* Choicey headers */
 #include "choices.h"
 #include "preporter.h"
 #include "common.h"
 
 /*
- * Set up initial choices.
+ * init_choices
+ * Set up initial choices from defaults.
  * These defaults are found in choices.h.
  */
 Choices init_choices(void)
@@ -45,6 +45,11 @@ Choices init_choices(void)
     return c;
 }
 
+/*
+ * save_choices
+ * Save current choices to the choices file.
+ * MidiMon saves its choices in a single flat file in the choices dir.
+ */
 int save_choices(void)
 {
     char choices_write_path[MAX_PATHNAME]; // value of env var Choices$Write
@@ -83,14 +88,13 @@ int save_choices(void)
     return 0;
 }
 
-/* Do all the dirty work of loading choices, creating defaults, etc */
+/*
+ * load_choices
+ * Load the choices from the choices file and store them in the global choices struct.
+ */
 int load_choices(void)
 {
-    /*
-     * Multiple calls to getenv will clobber the pointers, so these need to be
-     * copied somewhere safe. And while we're at it, make sure they were set.
-     */
-    char choices_path_env[MAX_PATHNAME];
+    char choices_path_env[MAX_PATHNAME]; // as in save_choices, store Choices$Path here
 
     if (getenv("Choices$Path") != NULL) {
         snprintf(choices_path_env, MAX_PATHNAME, "%s", getenv("Choices$Path"));
@@ -98,7 +102,6 @@ int load_choices(void)
         report_printf("MidiMon: Err: Choices$Path not set."); // TBD real error
         return 1;
     }
-
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Choices$Path is: %s",choices_path_env);
 #endif
@@ -113,14 +116,14 @@ int load_choices(void)
         report_printf("MidiMon: Choices file not found. Using defaults.");
     } else {
         if(fread(&global_choices, sizeof(global_choices), 1, choices_file) < 1) {
+            // TBD proper error here as well
             report_printf("MidiMon: Err: Opened Choices file but wasn't able to read it.");
-            global_choices = init_choices(); /* just throw it out */
+            global_choices = init_choices(); // choices file was unreadable, use defaults
         } else {
 #ifdef REPORTER_DEBUG
         report_printf("MidiMon: Successfully read Choices file");
 #endif
         }
-
         fclose(choices_file);
     }
 
@@ -128,6 +131,8 @@ int load_choices(void)
 }
 
 /*
+ * openin_choices
+ * This is a helper function for load_choices to locate and open the choices file.
  * Unlike Choices$Write, Choices$Path can contain multiple locations.
  * This function keeps trying them and returns first successful, or returns NULL.
  * I'm not sure if I'm interpreting the Acorn style guide correctly on this, but it

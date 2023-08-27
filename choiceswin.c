@@ -20,99 +20,110 @@
  * Purpose: Wimp handlers for Choices window and associated helpers.
  */
 
-/* Library headers */
+// Library stuff
 #include <stdbool.h>
 
-/* System headers */
+// RISC OS stuff
 #include "kernel.h"
 #include "swis.h"
-
-/* Toolbox headers */
 #include "event.h"
 #include "toolbox.h"
 #include "gadgets.h"
 #include "window.h"
-
-/* RISC_OSLib headers for MessageTrans lookup */
-#include "msgs.h"
+#include "msgs.h" // This and msgtrans are RISC_OSLib stuff
 #include "msgtrans.h"
 
-/* MidiMon headers */
+// My stuff
 #include "choices.h"
 #include "preporter.h"
 #include "common.h"
 #include "choiceswin.h"
 #include "midi.h"
 
-/* Globals */
+// Globals
 static ObjectId window_id_choices;
 static bool choices_opened = false;
 
-/* Called when the choices window is shown. */
+/*
+ * window_choices_onshow
+ * This handler is called when the choices window is shown. This does any first-time setup
+ * for the window, and makes sure the window is in step with any choices changes that
+ * may have happened while it was closed.
+ */
 int window_choices_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-    /* On the first time the choices window is shown, save ObjectId an update messages. */
     if (!choices_opened) {
         choices_opened = true;
-        window_id_choices = id_block->self_id;
-        load_messages_choiceswin();
+        window_id_choices = id_block->self_id; // save ObjectId for later use
+        load_messages_choiceswin(); // load messages
     }
+    refresh_gadgets(global_choices, id_block); // sync gadgets with choices
 
-    /* Update gadgets with the set choices */
+    return 1;
+}
+
+/*
+ * choices_save_button_click
+ * This handler is called when the 'Save' button is clicked. It both saves choices to disk
+ * and causes the choices to take effect
+ */
+int choices_save_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+    store_gadgets(&global_choices, id_block);
+    if(save_choices() != 0) {
+        report_printf("MidiMon: Error writing out Choices file");
+        exit(EXIT_FAILURE);
+    }
+    action_choices(&global_choices);
+
+    return 1;
+}
+
+/*
+ * choices_set_button_click
+ * This handler is called when the 'Set' button is clicked. It causes the choices to take
+ * effect without storing them to disk.
+ */
+int choices_set_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+    store_gadgets(&global_choices, id_block);
+    action_choices(&global_choices);
+
+    return 1;
+}
+
+/*
+ * choices_default_button_click
+ * This handler is called when the 'Default' button is clicked.
+ * According to the RISC OS Style Guide, this should reset the gadgets to defaults AND
+ * make the defaults active.
+ */
+int choices_default_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block,
+                                 void *handle)
+{
+    global_choices = init_choices(); // set active choices to defaults
     refresh_gadgets(global_choices, id_block);
 
     return 1;
 }
 
-/* Handler for 'Save' button in Choices dialog */
-int choices_save_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
-{
-    store_gadgets(&global_choices, id_block);
-
-    if(save_choices() != 0) {
-        report_printf("MidiMon: Error writing out Choices file");
-        exit(EXIT_FAILURE);
-    }
-
-    action_choices(&global_choices);
-
-    return 1;
-}
-
-/* Handler for 'Set' button in Choices dialog */
-int choices_set_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
-{
-    store_gadgets(&global_choices, id_block);
-
-    action_choices(&global_choices);
-
-    return 1;
-}
-
-/* Handler for 'Default' button click in Choices window */
-/* According to the Style guide, this should reset the gadgets to defaults AND
-make the defaults active. */
-int choices_default_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block,
-                                 void *handle)
-{
-    global_choices = init_choices(); /* set active choices to defaults */
-
-    refresh_gadgets(global_choices, id_block); /* reset the gadgets */
-
-    return 1;
-}
-
-/* Handler for 'Cancel' button click in Choices window */
+/*
+ * choices_cancel_button_click
+ * This handler is called when the 'Cancel' button is clicked.
+ * This discards all changes made.
+ */
 int choices_cancel_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block,
                                 void *handle)
 {
-    refresh_gadgets(global_choices, id_block); /* just set the gadgets back to whatever is stored */
+    refresh_gadgets(global_choices, id_block); // just set the gadgets back to whatever is stored
 
     return 1;
 }
 
-/* Refresh the gadgets to reflect the Choices instance, used by a couple
-handlers */
+/*
+ * refresh_gadgets
+ * Update gadgets to reflect what is stored in choices.
+ */
 void refresh_gadgets(Choices c, IdBlock *id_block)
 {
     numberrange_set_value(0, id_block->self_id, Gadget_Choices_TxChan, c.opt_txchan);
@@ -121,7 +132,10 @@ void refresh_gadgets(Choices c, IdBlock *id_block)
     optionbutton_set_state(0, id_block->self_id, Gadget_Choices_FakeFastClock, c.opt_fakefastclock);
 }
 
-/* Store the state of the gadgets to the Choices instance */
+/*
+ * store_gadgets
+ * Store the state of the gadgets to the given Choices struct.
+ */
 void store_gadgets(Choices *c, IdBlock *id_block)
 {
     numberrange_get_value(0, id_block->self_id, Gadget_Choices_TxChan, &(c->opt_txchan));
@@ -131,10 +145,13 @@ void store_gadgets(Choices *c, IdBlock *id_block)
                            &(c->opt_fakefastclock));
 }
 
-/* Take action on choices after they're loaded or set. This only applies to choices where
-   and immediate action is needed rather than being read later, like when a SWI is needed
-   to set an option with the MIDI module.
-*/
+/*
+ * action_choices
+ * Take action on choices after they're loaded or set. This only applies to choices where
+ * immediate action is needed rather than being read later, like when a SWI is needed to
+ * set an option with the MIDI module.
+ * This probably should be done differently.
+ */
 void action_choices(Choices *const c)
 {
     int new_channel = set_tx_channel(device_num, c->opt_txchan);
@@ -142,18 +159,19 @@ void action_choices(Choices *const c)
     fake_fast_clock(c->opt_fakefastclock);
 }
 
-/* Look up messages with MessageTrans */
+/*
+ * load_messages_choiceswin
+ * Look up messages with MessageTrans and update gadget labels.
+ */
 void load_messages_choiceswin(void)
 {
-    /* Debug */
     _kernel_oserror *err;
 
-    /* Load Messages file and save pointer to control block */
-    msgs_init();
+    msgs_init(); // load Messages file
     msgtrans_control_block *cb;
-    cb = msgs_main_control_block();
+    cb = msgs_main_control_block(); // save the pointer to the control block
 
-    /* Set window and gadget text */
+    // Set window and gadget text
     err = window_set_title(0, window_id_choices, msgs_lookup("Choices|1:Choices"));
     button_set_value(0, window_id_choices, Gadget_Choices_TxChanLabel,
                      msgs_lookup("Choices|4:Tx Channel"));
@@ -172,7 +190,7 @@ void load_messages_choiceswin(void)
     optionbutton_set_label(0, window_id_choices, Gadget_Choices_FakeFastClock,
                            msgs_lookup("Choices|10:Fake Fast Clock"));
 
-    /* Set help text */
+    // Set help text
     gadget_set_help_message(0, window_id_choices, Gadget_Choices_TxChan,
                             msgs_lookup("Choices|2:Unable to get help."));
     gadget_set_help_message(0, window_id_choices, Gadget_Choices_AltNoteOff,

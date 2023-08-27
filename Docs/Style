@@ -5,23 +5,13 @@
 - The app name is MidiMon (MIDI is not cased as an acronym as it looks better this way)
 - Reporter output: all reporter output should start with "MidiMon:" unless it is continuing a
   previous message, in which case it should indent with two spaces. A compile-time option will    turn on/off any messages which are useful only for debug.
-- Use C++ style comments for inline commments.
-- Both parameters and arguments for functions should be space separated.\
-- Multiline stuff should be broken up like so:
-
-int choices_default_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block,
-                                 void *handle)
-                                 
-- Anything not specified here will defer to Linux kernel style guidelines; these were chosen
-  somewhat arbitrarily, albeit for their easily accessible documentation.
-- Here are some notable exceptions to the above:
-    * Lines are to be limited to 100 columns, not 80.
-    * Indents are 4 characters, not 8.
-    * Typedefs are absolutely ok to use with structs and other user types, especially
-      as this is what the Acorn headers do.
+- Code is formatted with GNU indent using the following options:
+   -linux -cdb -sc -nut -i4 -l100
+- To facilitate the above:
+   * Indent gets confused on pointer syntax for typedefs. Not sure how to handle other
+     than look out and fix these manually right now.
+   * Use C++ style comments for inline or single-line comments.
 - This code was written in Zap, with 4 char column tabs (using spaces).
-- To summarize some other points from the style guide referenced above:
-    * K&R brace style is to be used throughout.
 
 /----------------------\
 | Part 2 - File Naming |

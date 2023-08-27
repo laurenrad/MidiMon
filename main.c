@@ -33,14 +33,11 @@
 #include "wimplib.h"
 #include "kernel.h"
 #include "swis.h"
+#include "msgs.h" // RISC_OSLib
+#include "msgtrans.h" // RISC_OSLib
+#include "werr.h" // RISC_OSLib
 
-/* RISC_OSLib headers */
-#include "msgs.h"
-#include "msgtrans.h"
-#include "werr.h"
-
-/* MidiMon headers */
-
+// MidiMon stuff
 #include "preporter.h"
 #include "common.h"
 #include "midi.h"
@@ -51,51 +48,57 @@
 #include "songwin.h"
 #include "iconbar.h"
 
+/* Globals and constants */
 #define WimpVersion	310
-
-/* Globals */
-Choices global_choices;
-int device_num = -1; /* device number, numbered 0-3 */
+struct Choices global_choices;
+int device_num = -1; // device number, numbered 0-3
 
 /* Static Globals */
-
 static WimpPollBlock poll_block;
 static MessagesFD messages;
 static IdBlock id_block;
 static int quit = 0;
 
-/* Functions */
 void register_handlers(void);
 int tbox_error_handler(int event_code, ToolboxEvent *event,
     	       	       IdBlock *id_block, void *handle);
 
-/***
-Event handler for quit events from the iconbar (as Toolbox event 1)
-***/
+/*
+ * quit_event
+ * This handler is called when the Quit item is selected from the Iconbar menu.
+ */
 int quit_event(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
   quit = 1;
   return 1;
 }
 
-/***
-Message handler for Wimp Quit or PreQuit messages
-***/
+/*
+ * quit_message
+ * This handler is called for Wimp Quit or PreQuit messages.
+*/
 int quit_message(WimpMessage *message, void *handle)
 {
   quit = 1;
   return 1;
 }
 
-/* Show help file */
+/*
+ * show_help
+ * This handler is called when the Help... option is selected from the Iconbar menu.
+ * It opens the help file.
+ */
 int show_help(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  system("Filer_Run <MidiMon$Dir>.!Help"); /* Open help file */
+  system("Filer_Run <MidiMon$Dir>.!Help");
 
   return 1;
 }
 
-/* Toolbox Error handler */
+/*
+ * tbox_error_handler
+ * This handler is called on Toolbox error events.
+ */
 int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
   ToolboxErrorEvent *e = (ToolboxErrorEvent *)event;
@@ -107,7 +110,10 @@ int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, v
   return 1;
 }
 
-/* Register event and message handlers */
+/*
+ * register_handlers
+ * Registers all event handlers for the application.
+ */
 void register_handlers(void)
 {
   /* Generic Toolbox events */
@@ -152,8 +158,6 @@ void register_handlers(void)
   event_register_toolbox_handler(-1,Event_Iconbar_ShowHelp,show_help,NULL);
   event_register_toolbox_handler(-1,Event_Iconbar_DeviceSelect,device_selection,NULL);
   event_register_toolbox_handler(-1,Event_Iconbar_Panic,midi_panic,NULL);
-  /* Since the device menu isn't created manually, this is probably easier than using the generic
-  Menu_AboutToBeShown event, I think.*/
   event_register_toolbox_handler(-1,Event_Iconbar_ShowDevMenu,update_devices_menu,NULL);
 
   /* Wimp events */
@@ -174,9 +178,9 @@ void register_handlers(void)
 
 int main(void)
 {
-  int wimp_messages = 0; /* Receive all Wimp messages */
-  int toolbox_events = 0; /* Receive all Toolbox events */
-  int event_code; /* For event_poll */
+  int wimp_messages = 0; // Receive all Wimp messages
+  int toolbox_events = 0; // Receive all Toolbox events
+  int event_code; // For event_poll
   _kernel_oserror *err;
 
   /* Initialise the Toolbox */
@@ -193,12 +197,10 @@ int main(void)
      - Gain_Caret */
   event_set_mask(0x1831);
 
-  register_handlers(); /* Register event and message handlers */
+  register_handlers(); // Register event and message handlers
 
-  if(load_choices() != 0) {
-    /* Something went seriously wrong -- currently this would mean
-    Choices$Path isn't set properly */
-    exit(EXIT_FAILURE); /* TBD cleanup? */
+  if(load_choices() != 0) { // Something went wrong -- like Choices$Path is set incorrectly
+    exit(EXIT_FAILURE);
   }
 
   /* Before entering poll loop, empty the MIDI Rx buffer so new rx messages
@@ -215,22 +217,21 @@ int main(void)
   else {
     /* Initial device setup.
      This should be able to use the new features of USB-MIDI 0.08 to
-     get the actual device names, let me check */
+     get the actual device names.
+     For now, this is hardcoded to use the first device as hardware/module
+     issues have prevented me from testing anything else. */
      int device_count;
-     char *dev_name; /* Pointer to device name string, eg "USB8" */
-     char *prod_name; /* Pointer to product name string */
+     char *dev_name; // pointer to device name string, eg "USB8"
+     char *prod_name; //* Pointer to product name string
      _swi(MIDI_USBInfo,_IN(0)|_OUT(0),0,&device_count);
      report_printf("MidiMon: MIDI Devices Connected: %d",device_count);
      if (device_count > 0) {
-       device_num = 0; /* Default to the 1st device. */
-       /* Beware! MIDI_USBInfo numbers 1-4, not 0-3. */
+       device_num = 0; // default to the 1st device
+       // Beware! MIDI_USBInfo numbers 1-4, not 0-3.
        for (int i = 1; i <= device_count; i++) {
          report_printf("  Device %d: %s",i,get_product_name(i));
-
-        /*clear_rx_buf(i-1);*/ /* Clear the buffer for the device */
        }
-       clear_rx_buf(1); /* hardcode to 1 for now due to my own hardware
-       	     	    	   issues */
+       clear_rx_buf(1); // clear the rx buffer for the device
      }
   }
 
