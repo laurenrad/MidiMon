@@ -6,7 +6,12 @@
 - Reporter output: all reporter output should start with "MidiMon:" unless it is continuing a
   previous message, in which case it should indent with two spaces. A compile-time option will    turn on/off any messages which are useful only for debug.
 - Use C++ style comments for inline commments.
-- Both parameters and arguments for functions should be space separated.
+- Both parameters and arguments for functions should be space separated.\
+- Multiline stuff should be broken up like so:
+
+int choices_default_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block,
+                                 void *handle)
+                                 
 - Anything not specified here will defer to Linux kernel style guidelines; these were chosen
   somewhat arbitrarily, albeit for their easily accessible documentation.
 - Here are some notable exceptions to the above:
