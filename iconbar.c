@@ -36,6 +36,12 @@
 #include "midi.h"
 #include "preporter.h"
 #include "monitorwin.h"
+#include "choices.h"
+
+/* Everything in this file besides panic currently pertains to multi-device selection, which
+   is disabled in this release as hardware and module issues prevented me from working it out
+   properly. However, I'm leaving the code in, in case some enterprising person with two
+   working MIDI interfaces wants to implement this. */
 
 /* Handler for default menu selection event */
 int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block,
@@ -58,6 +64,9 @@ int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block,
 #ifdef REPORTER_DEBUG
   report_printf("MidiMon: Device num set to %d and buffer cleared.",device_num);
 #endif
+
+  /* set tx channel*/
+  set_tx_channel(device_num,global_choices.opt_txchan);
 
   return 1;
 }
