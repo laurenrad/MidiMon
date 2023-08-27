@@ -112,7 +112,7 @@ int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, v
 
 /*
  * register_handlers
- * Registers all event handlers for the application.
+ * Registers various event handlers for the application.
  */
 void register_handlers(void)
 {
@@ -127,12 +127,6 @@ void register_handlers(void)
   event_register_toolbox_handler(-1,Event_Windows_ShowPiano,window_piano_onshow,NULL);
   event_register_toolbox_handler(-1,Event_Windows_ShowMessages,window_messages_onshow,NULL);
   event_register_toolbox_handler(-1,Event_Windows_ShowSong,window_song_onshow,NULL);
-
-  /* Toolbox events - Song Control window */
-  event_register_toolbox_handler(-1,Event_Song_Start,button_songstart,NULL);
-  event_register_toolbox_handler(-1,Event_Song_Continue,button_songcontinue,NULL);
-  event_register_toolbox_handler(-1,Event_Song_Stop,button_songstop,NULL);
-  event_register_toolbox_handler(-1,Event_Song_SendSongSel,button_sendsongsel,NULL);
 
   /* Toolbox events - Monitor window */
   event_register_toolbox_handler(-1,Event_Monitor_ClearLog,clear_scrolllist,NULL);
