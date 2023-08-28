@@ -29,7 +29,7 @@
 #include "toolbox.h"
 #include "gadgets.h"
 #include "window.h"
-#include "msgs.h" // RISC_OSLib
+#include "msgs.h"               // RISC_OSLib
 #include "msgtrans.h"
 
 // MidiMon stuff
@@ -39,23 +39,25 @@
 #include "choiceswin.h"
 #include "midi.h"
 
-#define Gadget_Choices_TxChan		0x00 // tx channel number range
-#define Gadget_Choices_TxChanLabel	0x01 // label: "Tx Channel" (actually a button)
-#define Gadget_Choices_AltNoteOff	0x02 // alt note off option button
-#define Gadget_Choices_IgnoreClock	0x03 // ignore clock option button
-#define Gadget_Choices_FakeFastClock	0x04 // fake fast clock option button
-#define Gadget_Choices_DefaultButton	0x05 // default action button
-#define Gadget_Choices_SaveButton	0x06 // save action button
-#define Gadget_Choices_CancelButton	0x07 // cancel action button
-#define Gadget_Choices_SetButton	0x08 // set action button
+#define Gadget_Choices_TxChan		0x00    // tx channel number range
+#define Gadget_Choices_TxChanLabel	0x01    // label: "Tx Channel" (actually a button)
+#define Gadget_Choices_AltNoteOff	0x02    // alt note off option button
+#define Gadget_Choices_IgnoreClock	0x03    // ignore clock option button
+#define Gadget_Choices_FakeFastClock	0x04    // fake fast clock option button
+#define Gadget_Choices_DefaultButton	0x05    // default action button
+#define Gadget_Choices_SaveButton	0x06    // save action button
+#define Gadget_Choices_CancelButton	0x07    // cancel action button
+#define Gadget_Choices_SetButton	0x08    // set action button
 
-static ObjectId window_id_choices;
-static bool choices_opened = false;
+static ObjectId window_id_choices; // stored ObjectId of this window
+static bool choices_opened = false; // track whether the ID is known
 
 int choices_set_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int choices_save_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int choices_default_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int choices_cancel_button_click(int event_code, ToolboxEvent *event, IdBlock *d_block, void *handle);
+int choices_default_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block,
+                                 void *handle);
+int choices_cancel_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block,
+                                void *handle);
 void refresh_gadgets(Choices c, IdBlock *id_block);
 void store_gadgets(Choices *c, IdBlock *id_block);
 void load_messages_choiceswin(void);
@@ -70,14 +72,14 @@ int window_choices_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block
 {
     if (!choices_opened) {
         choices_opened = true;
-        window_id_choices = id_block->self_id; // save ObjectId for later use
-        load_messages_choiceswin(); // load messages
+        window_id_choices = id_block->self_id;  // save ObjectId for later use
+        load_messages_choiceswin();     // load messages
     }
-    refresh_gadgets(global_choices, id_block); // sync gadgets with choices
-    event_register_toolbox_handler(-1,Event_Choices_Set,choices_set_button_click,NULL);
-    event_register_toolbox_handler(-1,Event_Choices_Save,choices_save_button_click,NULL);
-    event_register_toolbox_handler(-1,Event_Choices_Default,choices_default_button_click,NULL);
-    event_register_toolbox_handler(-1,Event_Choices_Cancel,choices_cancel_button_click,NULL);
+    refresh_gadgets(global_choices, id_block);  // sync gadgets with choices
+    event_register_toolbox_handler(-1, Event_Choices_Set, choices_set_button_click, NULL);
+    event_register_toolbox_handler(-1, Event_Choices_Save, choices_save_button_click, NULL);
+    event_register_toolbox_handler(-1, Event_Choices_Default, choices_default_button_click, NULL);
+    event_register_toolbox_handler(-1, Event_Choices_Cancel, choices_cancel_button_click, NULL);
 
     return 1;
 }
@@ -90,7 +92,7 @@ int window_choices_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block
 int choices_save_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
     store_gadgets(&global_choices, id_block);
-    if(save_choices() != 0) {
+    if (save_choices() != 0) {
         report_printf("MidiMon: Error writing out Choices file");
         exit(EXIT_FAILURE);
     }
@@ -121,7 +123,7 @@ int choices_set_button_click(int event_code, ToolboxEvent *event, IdBlock *id_bl
 int choices_default_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block,
                                  void *handle)
 {
-    global_choices = init_choices(); // set active choices to defaults
+    global_choices = init_choices();    // set active choices to defaults
     refresh_gadgets(global_choices, id_block);
 
     return 1;
@@ -135,7 +137,7 @@ int choices_default_button_click(int event_code, ToolboxEvent *event, IdBlock *i
 int choices_cancel_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block,
                                 void *handle)
 {
-    refresh_gadgets(global_choices, id_block); // just set the gadgets back to whatever is stored
+    refresh_gadgets(global_choices, id_block);  // just set the gadgets back to whatever is stored
 
     return 1;
 }
@@ -187,15 +189,15 @@ void load_messages_choiceswin(void)
 {
     _kernel_oserror *err;
 
-    msgs_init(); // load Messages file
+    msgs_init();                // load Messages file
     msgtrans_control_block *cb;
-    cb = msgs_main_control_block(); // save the pointer to the control block
+    cb = msgs_main_control_block();     // save the pointer to the control block
 
     // Set window and gadget text
     err = window_set_title(0, window_id_choices, msgs_lookup("Choices|1:Choices"));
     button_set_value(0, window_id_choices, Gadget_Choices_TxChanLabel,
                      msgs_lookup("Choices|4:Tx Channel"));
-    actionbutton_set_text(0, window_id_choices,Gadget_Choices_DefaultButton,
+    actionbutton_set_text(0, window_id_choices, Gadget_Choices_DefaultButton,
                           msgs_lookup("Choices|12:Default"));
     actionbutton_set_text(0, window_id_choices, Gadget_Choices_SaveButton,
                           msgs_lookup("Choices|14:Save"));
@@ -229,8 +231,9 @@ void load_messages_choiceswin(void)
                             msgs_lookup("Choices|17:Unable to get help."));
 
     if (err != NULL) {
-        report_printf("MidiMon: err: in load_messages_choiceswin - %d %s",err->errnum,err->errmess);
+        report_printf("MidiMon: err: in load_messages_choiceswin - %d %s", err->errnum,
+                      err->errmess);
     }
 
-    msgtrans_close_file(cb); // close Messages file
+    msgtrans_close_file(cb);    // close Messages file
 }

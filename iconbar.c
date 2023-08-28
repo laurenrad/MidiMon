@@ -47,22 +47,23 @@
  */
 int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  device_num = id_block->self_component; // set global device num
-  for (int i = 0; i < 4; i++) {
-    menu_set_tick(0,id_block->self_id,i,0); // first, untick all menu items
-  }
-  menu_set_tick(0,id_block->self_id,
-       	   	device_num,1); // then tick the selected menu item
-  /* Tell the monitor window to update its device display, if it's been opened.
-  Devices are numbered 1-4 here. */
-  update_device_display();
-  clear_rx_buf(device_num); // clear device rx buffer
+    device_num = id_block->self_component;      // set global device num
+    for (int i = 0; i < 4; i++) {
+        menu_set_tick(0, id_block->self_id, i, 0);      // first, untick all menu items
+    }
+    menu_set_tick(0, id_block->self_id, device_num, 1); // then tick the selected menu item
+    /*
+     * Tell the monitor window to update its device display, if it's been opened.
+     * Devices are numbered 1-4 here.
+     */
+    update_device_display();
+    clear_rx_buf(device_num);   // clear device rx buffer
 #ifdef REPORTER_DEBUG
-  report_printf("MidiMon: Device num set to %d and buffer cleared.",device_num);
+    report_printf("MidiMon: Device num set to %d and buffer cleared.", device_num);
 #endif
-  set_tx_channel(device_num,global_choices.opt_txchan); // set tx channel
+    set_tx_channel(device_num, global_choices.opt_txchan);      // set tx channel
 
-  return 1;
+    return 1;
 }
 
 /*
@@ -77,35 +78,36 @@ int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block, voi
  */
 int update_devices_menu(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  const int MAX_DEVICES = 4; // this is hardcoded into the module
-  const int PRODNAME_LENGTH = 50; // this is set in the res file
-  ObjectId menu_id = id_block->self_id;
-  int devices = device_count();
-  char entrystring[PRODNAME_LENGTH];
-  char *prodname;
+    const int MAX_DEVICES = 4;  // this is hardcoded into the module
+    const int PRODNAME_LENGTH = 50;     // this is set in the res file
+    ObjectId menu_id = id_block->self_id;
+    int devices = device_count();
+    char entrystring[PRODNAME_LENGTH];
+    char *prodname;
 
-  /* Fade/unfade based on available devices.
-     Obviously, this makes the assumption that the component IDs in the
-     menu are set up correctly. So don't break them :3 */
-  for (int component = 0; component < MAX_DEVICES; component++) {
-    if (component < devices) {
-      menu_set_fade(0,menu_id,component,0); // unfade
-      prodname = get_product_name(component+1); // devices are numbered 1-4 here
-      snprintf(entrystring,PRODNAME_LENGTH,"%d %s",component+1,prodname);
-      menu_set_entry_text(0,menu_id,component,entrystring);
+    /*
+     * Fade/unfade based on available devices.
+     * Obviously, this makes the assumption that the component IDs in the
+     * menu are set up correctly. So don't break them :3
+     */
+    for (int component = 0; component < MAX_DEVICES; component++) {
+        if (component < devices) {
+            menu_set_fade(0, menu_id, component, 0);    // unfade
+            prodname = get_product_name(component + 1); // devices are numbered 1-4 here
+            snprintf(entrystring, PRODNAME_LENGTH, "%d %s", component + 1, prodname);
+            menu_set_entry_text(0, menu_id, component, entrystring);
+        } else {
+            menu_set_fade(0, menu_id, component, 1);    // fade
+        }
     }
-    else {
-      menu_set_fade(0,menu_id,component,1); // fade
+    for (int i = 0; i < 4; i++) {
+        menu_set_tick(0, menu_id, i, 0);        // untick all devices...
     }
-  }
-  for (int i = 0; i < 4; i++) {
-    menu_set_tick(0,menu_id,i,0); // untick all devices...
-  }
-  if (device_num != -1) {
-    menu_set_tick(0,menu_id,device_num,1); // and tick the selected device
-  }
+    if (device_num != -1) {
+        menu_set_tick(0, menu_id, device_num, 1);       // and tick the selected device
+    }
 
-  return 1;
+    return 1;
 }
 
 /*
@@ -115,6 +117,6 @@ int update_devices_menu(int event_code, ToolboxEvent *event, IdBlock *id_block, 
  */
 int midi_panic(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  reset_midi();
-  return 1;
+    reset_midi();
+    return 1;
 }

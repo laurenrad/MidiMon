@@ -52,7 +52,7 @@ Choices init_choices(void)
  */
 int save_choices(void)
 {
-    char choices_write_path[MAX_PATHNAME]; // value of env var Choices$Write
+    char choices_write_path[MAX_PATHNAME];      // value of env var Choices$Write
     FILE *choices_file;
 
     /*
@@ -62,11 +62,11 @@ int save_choices(void)
     if (getenv("Choices$Write") != NULL) {
         snprintf(choices_write_path, MAX_PATHNAME, "%s.", getenv("Choices$Write"));
     } else {
-        report_printf("MidiMon: Err: Choices$Write not set."); // TBD: real error
+        report_printf("MidiMon: Err: Choices$Write not set.");  // TBD: real error
         return 1;
     }
 
-    report_printf("MidiMon: Choices$Write is: %s",choices_write_path);
+    report_printf("MidiMon: Choices$Write is: %s", choices_write_path);
     strncat(choices_write_path, LEAFNAME, MAX_PATHNAME - strlen(choices_write_path));
 
     choices_file = fopen(choices_write_path, "wb");
@@ -94,16 +94,16 @@ int save_choices(void)
  */
 int load_choices(void)
 {
-    char choices_path_env[MAX_PATHNAME]; // as in save_choices, store Choices$Path here
+    char choices_path_env[MAX_PATHNAME];        // as in save_choices, store Choices$Path here
 
     if (getenv("Choices$Path") != NULL) {
         snprintf(choices_path_env, MAX_PATHNAME, "%s", getenv("Choices$Path"));
     } else {
-        report_printf("MidiMon: Err: Choices$Path not set."); // TBD real error
+        report_printf("MidiMon: Err: Choices$Path not set.");   // TBD real error
         return 1;
     }
 #ifdef REPORTER_DEBUG
-    report_printf("MidiMon: Choices$Path is: %s",choices_path_env);
+    report_printf("MidiMon: Choices$Path is: %s", choices_path_env);
 #endif
     FILE *choices_file = openin_choices(choices_path_env);
     if (choices_file == NULL) {
@@ -115,13 +115,13 @@ int load_choices(void)
         global_choices = init_choices();
         report_printf("MidiMon: Choices file not found. Using defaults.");
     } else {
-        if(fread(&global_choices, sizeof(global_choices), 1, choices_file) < 1) {
+        if (fread(&global_choices, sizeof(global_choices), 1, choices_file) < 1) {
             // TBD proper error here as well
             report_printf("MidiMon: Err: Opened Choices file but wasn't able to read it.");
-            global_choices = init_choices(); // choices file was unreadable, use defaults
+            global_choices = init_choices();    // choices file was unreadable, use defaults
         } else {
 #ifdef REPORTER_DEBUG
-        report_printf("MidiMon: Successfully read Choices file");
+            report_printf("MidiMon: Successfully read Choices file");
 #endif
         }
         fclose(choices_file);
@@ -149,9 +149,9 @@ FILE *openin_choices(char *choices_path_env)
         choices_file = fopen(fullname, "rb");
         if (choices_file != NULL) {
 #ifdef REPORTER_DEBUG
-        report_printf("MidiMon: Selected choices path %s", fullname);
+            report_printf("MidiMon: Selected choices path %s", fullname);
 #endif
-        return choices_file;
+            return choices_file;
         }
         current_path = strtok(NULL, ",");
     }

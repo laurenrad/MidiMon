@@ -25,14 +25,14 @@
 #include <stdio.h>
 
 typedef struct Choices {
-  int choices_ver; /* This is to mark the version of the choices file */
-  int opt_txchan; /* Tx Channel */
-  int opt_altnoteoff; /* Alternate zero velocity note off */
-  int opt_ignoreclock; /* Ignore clock messages */
-  int opt_fakefastclock; /* Use fake fast clock - for now this will just be set for all devices */
+    int choices_ver;            // This is to mark the version of the choices file
+    int opt_txchan;             // Tx Channel
+    int opt_altnoteoff;         // Alternate zero velocity note off
+    int opt_ignoreclock;        // Ignore clock messages
+    int opt_fakefastclock;      // Use fake fast clock - for now this is set for all devices
 } Choices;
 
-extern Choices global_choices; /* This will be defined in main */
+extern Choices global_choices;  // This will be defined in main
 
 /* Define default values here */
 #define DEFAULTS_CHOICES_VER  	       	0
@@ -48,9 +48,9 @@ tried to make paths this long to test, the filer died horribly anyway */
 /* This will be appended to Choices$Path or Choices$Write */
 #define LEAFNAME	"MidiMon"
 
-Choices init_choices(void); // provide default choices
-int load_choices(void); // load choices from file
-int save_choices(void); // save choices to file
-FILE *openin_choices(char *choices_path_env); // open choices file for reading
+Choices init_choices(void);                     // provide default choices
+int load_choices(void);                         // load choices from file
+int save_choices(void);                         // save choices to file
+FILE *openin_choices(char *choices_path_env);   // open choices file for reading
 
 #endif

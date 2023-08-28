@@ -23,8 +23,8 @@
 #ifndef MIDIMON_ICONBAR_H
 #define MIDIMON_ICONBAR_H
 
-int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block,void *handle);
-int update_devices_menu(int event_code,ToolboxEvent *event,IdBlock *id_block,void *handle);
+int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int update_devices_menu(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int midi_panic(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 
 #endif

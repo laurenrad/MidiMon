@@ -20,8 +20,8 @@
  * Purpose: Main header for the Monitor window.
  */
 
- #ifndef MIDIMON_MONITOR_H
- #define MIDIMON_MONITOR_H
+#ifndef MIDIMON_MONITOR_H
+#define MIDIMON_MONITOR_H
 
 int window_monitor_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 void update_device_display(void);

@@ -36,21 +36,21 @@
 #include "midi.h"
 #include "preporter.h"
 
-#define Gadget_Msg_ProgChgStr		0x02 // StringSet: GM program names
-#define Gadget_Msg_ProgChgSend		0x07 // Program Change Send button
-#define Gadget_Msg_ProgChgNum		0x13 // Program Change numberrange
-#define Gadget_Msg_CntlrLabel		0x0A // Label: "Controller" (actually a button)
-#define Gadget_Msg_ValueLabel		0x10 // Label: "Value" (actually a button)
-#define Gadget_Msg_CtrlChgSend		0x0B // control change send button
+#define Gadget_Msg_ProgChgStr		0x02    // StringSet: GM program names
+#define Gadget_Msg_ProgChgSend		0x07    // Program Change Send button
+#define Gadget_Msg_ProgChgNum		0x13    // Program Change numberrange
+#define Gadget_Msg_CntlrLabel		0x0A    // Label: "Controller" (actually a button)
+#define Gadget_Msg_ValueLabel		0x10    // Label: "Value" (actually a button)
+#define Gadget_Msg_CtrlChgSend		0x0B    // control change send button
 #define Gadget_Msg_CtrlChgCntlr		0x0C
 #define Gadget_Msg_CtrlChgVal		0x0D
-#define Gadget_Msg_CtrlChgLblBox	0x18 // Control change box label (actually a button)
-#define Gadget_Msg_ProgChgLblBox	0x19 // Program change box label (actually a button)
-#define Gadget_Msg_TuneReq		0x09 // Send tune request button
-#define Gadget_Msg_SysReset		0x15 // Send system reset button
-#define Gadget_Msg_TuneReqLabel		0x16 // Label: "Tune Request" (actually a button)
-#define Gadget_Msg_SysResetLabel	0x17 // Label: "System Reset" (actually a button)
-#define Gadget_Msg_MiscLblBox		0x1A // Label: "Misc" (actually a button)
+#define Gadget_Msg_CtrlChgLblBox	0x18    // Control change box label (actually a button)
+#define Gadget_Msg_ProgChgLblBox	0x19    // Program change box label (actually a button)
+#define Gadget_Msg_TuneReq		0x09    // Send tune request button
+#define Gadget_Msg_SysReset		0x15    // Send system reset button
+#define Gadget_Msg_TuneReqLabel		0x16    // Label: "Tune Request" (actually a button)
+#define Gadget_Msg_SysResetLabel	0x17    // Label: "System Reset" (actually a button)
+#define Gadget_Msg_MiscLblBox		0x1A    // Label: "Misc" (actually a button)
 
 static ObjectId window_id_messages = -1;
 static bool messages_opened = false;    // Track if we know the window ID yet
@@ -68,7 +68,7 @@ int button_txsysreset(int event_code, ToolboxEvent *event, IdBlock *id_block, vo
  * On the first time the window is seen, this registers handlers, saves the ObjectId,
  * and does any miscellaneous first-time setup that may be needed.
  */
-int window_messages_onshow(int event_code, ToolboxEvent * event, IdBlock * id_block, void *handle)
+int window_messages_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
     if (messages_opened == false) {
         messages_opened = true;
@@ -178,23 +178,23 @@ void load_messages_messageswin(void)
     /*
      * Window and gadget text
      */
-    err = window_set_title(0, window_id_messages, msgs_lookup("Messages|1:err")); // window title
+    window_set_title(0, window_id_messages, msgs_lookup("Messages|1:err")); // window title
     actionbutton_set_text(0, window_id_messages, Gadget_Msg_TuneReq,
-                          msgs_lookup("Messages|8:err")); // Tune Req send button
+                          msgs_lookup("Messages|8:err"));   // Tune Req send button
     actionbutton_set_text(0, window_id_messages, Gadget_Msg_SysReset,
-                          msgs_lookup("Messages|8:err")); // Sys Reset send button
+                          msgs_lookup("Messages|8:err"));   // Sys Reset send button
     actionbutton_set_text(0, window_id_messages, Gadget_Msg_ProgChgSend,
-                          msgs_lookup("Messages|8:err")); // Prog Chg send button
+                          msgs_lookup("Messages|8:err"));   // Prog Chg send button
     actionbutton_set_text(0, window_id_messages, Gadget_Msg_CtrlChgSend,
-                          msgs_lookup("Messages|8:err")); // ctrl chg send button
+                          msgs_lookup("Messages|8:err"));   // ctrl chg send button
     button_set_value(0, window_id_messages, Gadget_Msg_CntlrLabel,
-                     msgs_lookup("Messages|20:err"));     // label: "Controller"
+                     msgs_lookup("Messages|20:err"));       // label: "Controller"
     button_set_value(0, window_id_messages, Gadget_Msg_ValueLabel,
-                     msgs_lookup("Messages|22:err"));     // label: "Value"
+                     msgs_lookup("Messages|22:err"));       // label: "Value"
     button_set_value(0, window_id_messages, Gadget_Msg_TuneReqLabel,
-                     msgs_lookup("Messages|10:err"));   // label: "Tune Request"
+                     msgs_lookup("Messages|10:err"));       // label: "Tune Request"
     button_set_value(0, window_id_messages, Gadget_Msg_SysResetLabel,
-                     msgs_lookup("Messages|29:err"));  // label: "System Reset"
+                     msgs_lookup("Messages|29:err"));       // label: "System Reset"
     /*
      * Here are the buttons I've used to replace the unchangable label box text. This still isn't
      * ideal as the spacing on the label box will be static, but it will do for now.
@@ -204,7 +204,7 @@ void load_messages_messageswin(void)
     button_set_value(0, window_id_messages, Gadget_Msg_ProgChgLblBox,
                      msgs_lookup("Messages|24:err"));  // label: "Program Change"
     button_set_value(0, window_id_messages, Gadget_Msg_MiscLblBox,
-                     msgs_lookup("Messages|26:err"));     // label: "Misc"
+                     msgs_lookup("Messages|26:err"));  // label: "Misc"
     // TODO: how to handle default string set text?
     stringset_set_available(0, window_id_messages, Gadget_Msg_ProgChgStr,
                             msgs_lookup("Messages|31:Unable to read Messages file."));
