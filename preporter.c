@@ -27,6 +27,8 @@
 #include "swis.h"
 #include "preporter.h"
 
+char _reporter_buf[BUFSIZE];
+
 /* Print a string to Reporter. */
 void report_text0(char *s)
 {

@@ -28,7 +28,7 @@ here are some quick and dirty wrapper functions for Reporter SWIs.
 #include "kernel.h"
 
 #define BUFSIZE 1000
-static char _reporter_buf[BUFSIZE];
+extern char _reporter_buf[BUFSIZE];
 
 #define Error_UnknownSWI        0x1E6   // Error for try_reporter
 
