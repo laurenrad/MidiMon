@@ -16,12 +16,12 @@
 /*
  * Application: !Midimon
  * Author: Lauren Rad
- * File: iconbar.h
- * Description: Handlers for Iconbar icon and associated menus (Headers).
+ * File: ibar.h
+ * Description: Header for Iconbar icon and associated menus.
 */
 
-#ifndef MIDIMON_ICONBAR_H
-#define MIDIMON_ICONBAR_H
+#ifndef MIDIMON_IBAR_H
+#define MIDIMON_IBAR_H
 
 int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int update_devices_menu(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);

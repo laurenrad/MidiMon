@@ -31,7 +31,6 @@
 #include "wimplib.h"
 #include "event.h"
 #include "toolbox.h"
-#include "iconbar.h"
 #include "menu.h"
 #include "ScrollList.h"
 #include "saveas.h"

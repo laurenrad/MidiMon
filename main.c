@@ -46,7 +46,7 @@
 #include "pianowin.h"
 #include "messageswin.h"
 #include "songwin.h"
-#include "iconbar.h"
+#include "ibar.h"
 
 #define WimpVersion	310
 struct Choices global_choices;
