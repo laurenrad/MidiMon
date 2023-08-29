@@ -176,7 +176,7 @@ void store_gadgets(Choices *c, IdBlock *id_block)
  */
 void action_choices(Choices *const c)
 {
-    int new_channel = set_tx_channel(device_num, c->opt_txchan);
+    set_tx_channel(device_num, c->opt_txchan);
     ignore_timing(c->opt_ignoreclock);
     fake_fast_clock(c->opt_fakefastclock);
 }

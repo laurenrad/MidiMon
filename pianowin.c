@@ -347,7 +347,7 @@ int key_clicked(int event_code, WimpPollBlock * event, IdBlock * id_block, void 
  * This isn't ideal but while the slider is dragged, an adjust click won't be recognised,
  * so this is the best I can do for now.
  */
-int slider_snap(int event_code, WimpPollBlock * event, IdBlock * id_block, void *handle)
+int slider_snap(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
 {
     WimpMouseClickEvent *m = (WimpMouseClickEvent *) event;
 
@@ -452,16 +452,16 @@ int get_octave(void)
 int has_caret(void)
 {
     _kernel_oserror *err = NULL;
-    WimpGetCaretPositionBlock *b;       // in wimp.h
+    WimpGetCaretPositionBlock b;       // in wimp.h
     int window_handle_piano;    // Wimp handle of piano window
 
     if (piano_opened) {
-        err = wimp_get_caret_position(b);
+        err = wimp_get_caret_position(&b);
         window_get_wimp_handle(0, window_id_piano, &window_handle_piano);
         if (err != NULL) {
             report_printf("an error occurred in has_caret: %d %s", err->errnum, err->errmess);
         } else {
-            if (b->window_handle == window_handle_piano) {
+            if (b.window_handle == window_handle_piano) {
                 return 1;
             }
         }

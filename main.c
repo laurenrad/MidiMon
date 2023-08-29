@@ -119,8 +119,6 @@ int main(void)
          * issues have prevented me from testing anything else.
          */
         int device_count;
-        char *dev_name;         // pointer to device name string, eg "USB8"
-        char *prod_name;        //* Pointer to product name string
         _swi(MIDI_USBInfo, _IN(0) | _OUT(0), 0, &device_count);
         report_printf("MidiMon: MIDI Devices Connected: %d", device_count);
         if (device_count > 0) {

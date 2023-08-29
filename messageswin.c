@@ -174,7 +174,7 @@ void load_messages_messageswin(void)
     /*
      * Window and gadget text
      */
-    window_set_title(0, window_id_messages, msgs_lookup("Messages|1:err")); // window title
+    err = window_set_title(0, window_id_messages, msgs_lookup("Messages|1:err")); // window title
     actionbutton_set_text(0, window_id_messages, Gadget_Msg_TuneReq,
                           msgs_lookup("Messages|8:err"));   // Tune Req send button
     actionbutton_set_text(0, window_id_messages, Gadget_Msg_SysReset,
