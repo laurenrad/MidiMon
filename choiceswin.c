@@ -189,10 +189,6 @@ void load_messages_choiceswin(void)
 {
     _kernel_oserror *err;
 
-    msgs_init();                // load Messages file
-    msgtrans_control_block *cb;
-    cb = msgs_main_control_block();     // save the pointer to the control block
-
     // Set window and gadget text
     err = window_set_title(0, window_id_choices, msgs_lookup("Choices|1:Choices"));
     button_set_value(0, window_id_choices, Gadget_Choices_TxChanLabel,
@@ -234,6 +230,4 @@ void load_messages_choiceswin(void)
         report_printf("MidiMon: err: in load_messages_choiceswin - %d %s", err->errnum,
                       err->errmess);
     }
-
-    msgtrans_close_file(cb);    // close Messages file
 }

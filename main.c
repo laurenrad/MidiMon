@@ -55,6 +55,7 @@ static WimpPollBlock poll_block;
 static MessagesFD messages;
 static IdBlock id_block;
 static int quit = 0;
+msgtrans_control_block *cb; // control block pointer for MessageTrans
 
 int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int quit_event(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
@@ -139,11 +140,21 @@ int main(void)
     action_choices(&global_choices);
 
     /*
+     * Initialise MessageTrans
+     */
+
+     msgs_init();
+     cb = msgs_main_control_block(); // save pointer to control block
+
+    /*
      * Begin poll loop
      */
     while (!quit) {
         event_poll(&event_code, &poll_block, 0);
     }
+
+    msgtrans_close_file(cb); // close Messages file
+    report_printf("MidiMon: exiting!");
 
     exit(EXIT_SUCCESS);
 

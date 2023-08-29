@@ -379,10 +379,6 @@ void load_messages_pianowin(void)
     _kernel_oserror *err;
     ObjectId toolbar_id_h, toolbar_id_v;
 
-    msgs_init();                // load messages file
-    msgtrans_control_block *cb;
-    cb = msgs_main_control_block();     // save pointer to control block
-
     /*
      * Get ObjectIds of the toolbars
      */
@@ -412,8 +408,6 @@ void load_messages_pianowin(void)
     if (err != NULL) {
         report_printf("MidiMon: err in load_messages_pianowin - %d: %s", err->errnum, err->errmess);
     }
-
-    msgtrans_close_file(cb);    // close Messages file
 }
 
 /*

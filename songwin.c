@@ -135,10 +135,6 @@ void load_messages_songwin(void)
 {
     _kernel_oserror *err;
 
-    msgs_init();                       // load Messages file
-    msgtrans_control_block *cb;
-    cb = msgs_main_control_block();     // save pointer to control block
-
     /*
      * Window and gadget text
      */
@@ -171,6 +167,4 @@ void load_messages_songwin(void)
     if (err != NULL) {
         report_printf("MidiMon: err in load_messages_songwin - %d: %s", err->errnum, err->errmess);
     }
-
-    msgtrans_close_file(cb);    // close Messages file
 }

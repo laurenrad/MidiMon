@@ -24,6 +24,7 @@
 #include <time.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "kernel.h"
 #include "swis.h"
@@ -229,15 +230,9 @@ void update_device_display(void)
                 report_printf("MidiMon: Unknown error getting product name");
             }
         } else {
-            /*
-             * Load in localised "No Device" message from file. Not efficient but easy for now.
-             */
-            msgs_init();
-            msgtrans_control_block *cb;
-            cb = msgs_main_control_block();
+            /* Load in localised "No Device" message. */
             err = displayfield_set_value(0, window_id_main, Gadget_Monitor_DeviceDisplay,
                                          msgs_lookup("Monitor|6:No device selected"));
-            msgtrans_close_file(cb);
         }
 
         if (err != NULL) {
@@ -259,7 +254,8 @@ int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, vo
     scrolllist_add_item(0, window_id_main, Gadget_Monitor_ScrollList, asctime(local), NULL, NULL,
                         -1);
 
-    return 1;
+    //return 1;
+    exit(EXIT_FAILURE);
 }
 
 /*
@@ -269,10 +265,6 @@ int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, vo
 void load_messages_monitorwin(void)
 {
     _kernel_oserror *err;
-
-    msgs_init();                // load messages file
-    msgtrans_control_block *cb;
-    cb = msgs_main_control_block(); // save pointer to control block
 
     /*
      * Set gadget and window text
@@ -296,6 +288,4 @@ void load_messages_monitorwin(void)
         report_printf("MidiMon: err in load_messages_monitorwin - %d: %s", err->errnum,
                       err->errmess);
     }
-
-    msgtrans_close_file(cb);    // Close Messages file
 }
