@@ -1,6 +1,6 @@
                                                         
                             /----------------------------------\
-                            |           MidiMon 0.10           |
+                            |           MidiMon 1.00           |
                             |           by Lauren Rad          |
                             \__________________________________/
 
@@ -42,6 +42,10 @@ can be obtained from:
 
 https://github.com/laurenrad/MidiMon
 
+This will likely be the last version, unless I can get hardware that works reliably
+with the MIDI module; when I started development it worked most of the time, and by
+the end I am no longer able to get it to work at all.
+
 -------------------------------
  Part 2. Installing and Running 
 -------------------------------
@@ -68,7 +72,9 @@ topic:
     qualified to contribute to it at the moment). If you are having similar
     issues, confirm with the module's included test programs first whether
     the module is working properly. It may take various combos of
-    plugging/unplugging, rebooting, etc. 
+    plugging/unplugging, rebooting, etc.
+  - Because of the above, MidiMon cannot use multiple devices; it will
+    simply use the first device detected by the MIDI module.
   - While I'm at it, here is the hardware involved: Raspberry Pi 400,
     Presonus AudioBox USB 96, generic USB to MIDI cable interface (the
     one with the treble staff logo; it's sold under a million made-up brands
@@ -104,10 +110,6 @@ The Main menu contains the following components:
   - Info: View information about the application.
   - Controllers: Opens a submenu which contains items which open the
     following windows: Messages, Piano, Song Control.
-  - Devices: Opens a menu to select the active MIDI device from up to 4
-    devices. This option currently is disabled as it does not work in this
-    version, but the application will work with whatever the USB-MIDI module
-    considers to be the 'default' device on startup.
   - Panic: Resets the state of the MIDI module. This can sometimes help if
     there is a problem.
   - Help: Opens this help file.
@@ -121,9 +123,8 @@ The Monitor window shows incoming MIDI messages in a scrolling list and the
 currently selected device (see the Main menu section for more information on
 devices). Clicking the MENU mouse button on the window opens a menu which
 offers the following functions:
-  - Save: Save the log to a text file.
-  - Copy: Copy the selected item to the clipboard. (Currently not implemented
-    in this version -- this option is disabled).
+  - Save: Drag-and-drop save/copy of the full log to a text file.
+  - Selection: Drag-and-drop save/copy of the currently selected log item.
   - Clear: Clear the log.
 
 ------------------------  
@@ -195,8 +196,7 @@ Part 9. The Choices Dialog
 The Choices dialog contains the following choices:
   - Tx Channel: Set the MIDI channel for outgoing MIDI messages.
   - Zero Velocity Note Off: When selected, send a Note On message with
-    Velocity=0 instead of a Note Off message when ending a note. This is not
-    currently implemented.
+    Velocity=0 instead of a Note Off message when ending a note.
   - Ignore Clock Messages: Ignore incoming clock messages.
   - Fake Fast Clock: Set module option to use system ticker instead of high
     resolution timer. See USB-MIDI's user guide for info on this option.
@@ -226,7 +226,7 @@ pull from when installing.
 Part 11. Issues and Miscellany  
 ------------------------------
   - Receiving System Exclusive messages may break the Monitor window. This
-    seems to be due to a combination of a bug in the USB-MIDI module and the
+    is due to a combination of an issue in the USB-MIDI module and the current
     design of MidiMon. If this occurs, use the Panic option in the main menu
     to reset the module state.
   - MidiMon outputs some messages to !Reporter:

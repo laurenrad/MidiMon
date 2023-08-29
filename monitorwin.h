@@ -17,20 +17,13 @@
  * Application: !Midimon
  * File: monitor.h
  * Author: Lauren Rad
- * Purpose: Handlers for the Monitor window. (Header)
+ * Purpose: Main header for the Monitor window.
  */
 
- #ifndef MIDIMON_MONITOR_H
- #define MIDIMON_MONITOR_H
+#ifndef MIDIMON_MONITOR_H
+#define MIDIMON_MONITOR_H
 
-int clear_scrolllist(int event_code,ToolboxEvent *event,IdBlock *id_block,void *handle);
-int handle_incoming(WimpMessage *message, void *handle);
-int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-void update_device_display(void);
-int test_button_click(int event_code,ToolboxEvent *event,IdBlock *id_block, void *handle);
 int window_monitor_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-void load_messages_monitorwin(void);
-
-/* Constants */
+void update_device_display(void);
 
 #endif

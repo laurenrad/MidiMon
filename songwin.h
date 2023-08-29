@@ -17,18 +17,12 @@
  * Application: !Midimon
  * File: songwin.h
  * Author: Lauren Rad
- * Purpose: Handlers for the Song Control window (Header).
+ * Purpose: Main header for the Song Control window.
 */
 
 #ifndef MIDIMON_SONGWIN_H
 #define MIDIMON_SONGWIN_H
 
-/* Functions */
 int window_song_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int button_songstart(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int button_songcontinue(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int button_songstop(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int button_sendsongsel(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-void load_messages_songwin(void);
 
 #endif

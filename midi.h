@@ -23,7 +23,34 @@
 #ifndef MIDIMON_MIDI_H
 #define MIDIMON_MIDI_H
 
-/* USBMidi SWI numbers */
+int device_count(void);          // return number of available MIDI devices
+int clear_rx_buf(int device);    // clear the rx buf
+int read_rx_command(int device); // handle new incoming message
+int tx_noteon(int note, int velocity, int oct_shift);   // send note on
+int tx_noteoff(int note, int velocity, int oct_shift);  // send note off
+void tx_progchg(int prog);       // send program change
+void tx_controlchg(int control, int value);     // send control change
+void tx_songstart(void);         // send song start
+void tx_songcontinue(void);      // send song continue
+void tx_songstop(void);          // send song stop
+void tx_songsel(int num);        // send song select
+void tx_tunereq(void);           // tx tune request command
+void tx_sysreset(void);          // tx system reset command
+void tx_pitchwheel(int pitch);   // tx pitchwheel command
+void ignore_timing(int option);  // turn timing clock messages on/off
+void reset_midi(void);           // reset the MIDI module status
+int fake_fast_clock(int option); // set fake fast clock option
+int set_tx_channel(int device, int channel);    // set tx channel
+int midi_error(WimpMessage *message, void *handle);    // handle MIDI error message
+int midi_dying(WimpMessage *message, void *handle);    // handle MIDI dying msg
+int midi_dev_connected(WimpMessage *message, void *handle);    // handle device connect msg
+int midi_dev_disconnected(WimpMessage *message, void *handle); // handle device disconnect msg
+char *get_product_name(int device);     // get the product name of a device
+void parse_command(int command, char *buf, int buf_size);       // printable command
+
+/*
+ * USBMidi SWI numbers
+ */
 #define MIDI_SoundEnable 	       	0x404C0
 #define MIDI_SetMode		  	0x404C1
 #define MIDI_SetTxChannel	  	0x404C2
@@ -63,33 +90,5 @@
 #define MIDI_Interface			0x404E4 /* DO NOT CALL */
 #define MIDI_USBInfo			0x404EA
 #define MIDI_Options			0x404EB
-
-/* functions */
-
-int device_count(void); /* return number of available MIDI devices */
-int clear_rx_buf(int device); /* clear the rx buf */
-int read_rx_command(int device); /* handle new incoming message */
-int tx_noteon(int note, int velocity, int oct_shift); /* send note on */
-int tx_noteoff(int note, int velocity, int oct_shift); /* send note off */
-void tx_progchg(int prog); /* send program change */
-void tx_controlchg(int control, int value); /* send control change */
-void tx_songstart(void); /* send song start */
-void tx_songcontinue(void); /* send song continue */
-void tx_songstop(void); /* send song stop */
-void tx_songsel(int num); /* send song select */
-void tx_tunereq(void); /* tx tune request command */
-void tx_sysreset(void); /* tx system reset command */
-void tx_pitchwheel(int pitch); /* tx pitchwheel command */
-void ignore_timing(int option); /* turn timing clock messages on/off */
-void reset_midi(void); /* reset the MIDI module status */
-int fake_fast_clock(int option); /* set fake fast clock option */
-int set_tx_channel(int device, int channel); /* set tx channel */
-int midi_error(WimpMessage *message, void *handle); /* handle MIDI error message */
-int midi_initialised(WimpMessage *message, void *handle); /* handle MIDI initialised msg */
-int midi_dying(WimpMessage *message, void *handle); /* handle MIDI dying msg */
-int midi_dev_connected(WimpMessage *message, void *handle); /* handle device connect msg */
-int midi_dev_disconnected(WimpMessage *message, void *handle); /* handle device disconnect msg */
-char *get_product_name(int device); /* get the product name of a device */
-void parse_command(int command, char *buf, int buf_size); /* printable command */
 
 #endif

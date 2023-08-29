@@ -20,187 +20,214 @@
  * Purpose: Wimp handlers for Choices window and associated helpers.
  */
 
-/* Library headers */
+// Library stuff
 #include <stdbool.h>
 
-/* System headers */
 #include "kernel.h"
 #include "swis.h"
-
-/* Toolbox headers */
 #include "event.h"
 #include "toolbox.h"
 #include "gadgets.h"
 #include "window.h"
-
-/* RISC_OSLib headers for MessageTrans lookup */
-#include "msgs.h"
+#include "msgs.h"               // RISC_OSLib
 #include "msgtrans.h"
 
-/* MidiMon headers */
+// MidiMon stuff
 #include "choices.h"
 #include "preporter.h"
 #include "common.h"
 #include "choiceswin.h"
 #include "midi.h"
 
-/* Globals */
-static ObjectId window_id_choices;
-static bool choices_opened = false;
+#define Gadget_Choices_TxChan		0x00    // tx channel number range
+#define Gadget_Choices_TxChanLabel	0x01    // label: "Tx Channel" (actually a button)
+#define Gadget_Choices_AltNoteOff	0x02    // alt note off option button
+#define Gadget_Choices_IgnoreClock	0x03    // ignore clock option button
+#define Gadget_Choices_FakeFastClock	0x04    // fake fast clock option button
+#define Gadget_Choices_DefaultButton	0x05    // default action button
+#define Gadget_Choices_SaveButton	0x06    // save action button
+#define Gadget_Choices_CancelButton	0x07    // cancel action button
+#define Gadget_Choices_SetButton	0x08    // set action button
 
-/* Called when the choices window is shown. */
+static ObjectId window_id_choices; // stored ObjectId of this window
+static bool choices_opened = false; // track whether the ID is known
+
+int choices_set_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int choices_save_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int choices_default_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block,
+                                 void *handle);
+int choices_cancel_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block,
+                                void *handle);
+void refresh_gadgets(Choices c, IdBlock *id_block);
+void store_gadgets(Choices *c, IdBlock *id_block);
+void load_messages_choiceswin(void);
+
+/*
+ * window_choices_onshow
+ * This handler is called when the choices window is shown. This does any first-time setup
+ * for the window, and makes sure the window is in step with any choices changes that
+ * may have happened while it was closed.
+ */
 int window_choices_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  /* On the first time the choices window is shown, save ObjectId an update messages. */
-  if (!choices_opened) {
-    choices_opened = true;
-    window_id_choices = id_block->self_id;
-    load_messages_choiceswin();
-  }
+    if (!choices_opened) {
+        choices_opened = true;
+        window_id_choices = id_block->self_id;  // save ObjectId for later use
+        load_messages_choiceswin();     // load messages
+    }
+    refresh_gadgets(global_choices, id_block);  // sync gadgets with choices
+    event_register_toolbox_handler(-1, Event_Choices_Set, choices_set_button_click, NULL);
+    event_register_toolbox_handler(-1, Event_Choices_Save, choices_save_button_click, NULL);
+    event_register_toolbox_handler(-1, Event_Choices_Default, choices_default_button_click, NULL);
+    event_register_toolbox_handler(-1, Event_Choices_Cancel, choices_cancel_button_click, NULL);
 
-  /* Update gadgets with the set choices */
-  refresh_gadgets(global_choices, id_block);
-
-  return 1;
+    return 1;
 }
 
-/* Handler for 'Save' button in Choices dialog */
+/*
+ * choices_save_button_click
+ * This handler is called when the 'Save' button is clicked. It both saves choices to disk
+ * and causes the choices to take effect
+ */
 int choices_save_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  store_gadgets(&global_choices, id_block);
+    store_gadgets(&global_choices, id_block);
+    if (save_choices() != 0) {
+        report_printf("MidiMon: Error writing out Choices file");
+        exit(EXIT_FAILURE);
+    }
+    action_choices(&global_choices);
 
-  if(save_choices() != 0) {
-    report_printf("MidiMon: Error writing out Choices file");
-    exit(EXIT_FAILURE);
-  }
-
-  action_choices(&global_choices);
-
-  return 1;
+    return 1;
 }
 
-/* Handler for 'Set' button in Choices dialog */
+/*
+ * choices_set_button_click
+ * This handler is called when the 'Set' button is clicked. It causes the choices to take
+ * effect without storing them to disk.
+ */
 int choices_set_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-  store_gadgets(&global_choices, id_block);
+    store_gadgets(&global_choices, id_block);
+    action_choices(&global_choices);
 
-  action_choices(&global_choices);
-
-  return 1;
+    return 1;
 }
 
-/* Handler for 'Default' button click in Choices window */
-/* According to the Style guide, this should reset the gadgets to defaults AND
-make the defaults active. */
-int choices_default_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+/*
+ * choices_default_button_click
+ * This handler is called when the 'Default' button is clicked.
+ * According to the RISC OS Style Guide, this should reset the gadgets to defaults AND
+ * make the defaults active.
+ */
+int choices_default_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block,
+                                 void *handle)
 {
-  global_choices = init_choices(); /* set active choices to defaults */
+    global_choices = init_choices();    // set active choices to defaults
+    refresh_gadgets(global_choices, id_block);
 
-  refresh_gadgets(global_choices, id_block); /* reset the gadgets */
-
-  return 1;
+    return 1;
 }
 
-/* Handler for 'Cancel' button click in Choices window */
-int choices_cancel_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+/*
+ * choices_cancel_button_click
+ * This handler is called when the 'Cancel' button is clicked.
+ * This discards all changes made.
+ */
+int choices_cancel_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block,
+                                void *handle)
 {
-  refresh_gadgets(global_choices, id_block); /* just set the gadgets back to whatever is stored */
+    refresh_gadgets(global_choices, id_block);  // just set the gadgets back to whatever is stored
 
-  return 1;
+    return 1;
 }
 
-/* Refresh the gadgets to reflect the Choices instance, used by a couple
-handlers */
+/*
+ * refresh_gadgets
+ * Update gadgets to reflect what is stored in choices.
+ */
 void refresh_gadgets(Choices c, IdBlock *id_block)
 {
-  numberrange_set_value(0,id_block->self_id,Gadget_Choices_TxChan,c.opt_txchan);
-  optionbutton_set_state(0,id_block->self_id,Gadget_Choices_AltNoteOff,c.opt_altnoteoff);
-  optionbutton_set_state(0,id_block->self_id,Gadget_Choices_IgnoreClock,c.opt_ignoreclock);
-  optionbutton_set_state(0,id_block->self_id,Gadget_Choices_FakeFastClock,c.opt_fakefastclock);
+    numberrange_set_value(0, id_block->self_id, Gadget_Choices_TxChan, c.opt_txchan);
+    optionbutton_set_state(0, id_block->self_id, Gadget_Choices_AltNoteOff, c.opt_altnoteoff);
+    optionbutton_set_state(0, id_block->self_id, Gadget_Choices_IgnoreClock, c.opt_ignoreclock);
+    optionbutton_set_state(0, id_block->self_id, Gadget_Choices_FakeFastClock, c.opt_fakefastclock);
 }
 
-/* Store the state of the gadgets to the Choices instance */
+/*
+ * store_gadgets
+ * Store the state of the gadgets to the given Choices struct.
+ */
 void store_gadgets(Choices *c, IdBlock *id_block)
 {
-  numberrange_get_value(0,id_block->self_id,Gadget_Choices_TxChan,&(c->opt_txchan));
-  optionbutton_get_state(0,id_block->self_id,Gadget_Choices_AltNoteOff,&(c->opt_altnoteoff));
-  optionbutton_get_state(0,id_block->self_id,Gadget_Choices_IgnoreClock,&(c->opt_ignoreclock));
-  optionbutton_get_state(0,id_block->self_id,Gadget_Choices_FakeFastClock,&(c->opt_fakefastclock));
+    numberrange_get_value(0, id_block->self_id, Gadget_Choices_TxChan, &(c->opt_txchan));
+    optionbutton_get_state(0, id_block->self_id, Gadget_Choices_AltNoteOff, &(c->opt_altnoteoff));
+    optionbutton_get_state(0, id_block->self_id, Gadget_Choices_IgnoreClock, &(c->opt_ignoreclock));
+    optionbutton_get_state(0, id_block->self_id, Gadget_Choices_FakeFastClock,
+                           &(c->opt_fakefastclock));
 }
 
-/* Debug: print out choices to reporter. This isn't currently called */
-void debug_print_choices(Choices *const c)
-{
-  report_printf("Choices values:");
-  report_printf("Version:\t%d",c->choices_ver);
-  report_printf("Tx Channel:\t%d",c->opt_txchan);
-  report_printf("Alt Note Off:\t%d",c->opt_altnoteoff);
-  report_printf("Ignore Clock:\t%d",c->opt_ignoreclock);
-  report_printf("Fake Fast Clock:\t%d",c->opt_fakefastclock);
-}
-
-/* Take action on choices after they're loaded or set. This only applies to choices where
-   and immediate action is needed rather than being read later, like when a SWI is needed
-   to set an option with the MIDI module.
-*/
+/*
+ * action_choices
+ * Take action on choices after they're loaded or set. This only applies to choices where
+ * immediate action is needed rather than being read later, like when a SWI is needed to
+ * set an option with the MIDI module.
+ * This probably should be done differently.
+ */
 void action_choices(Choices *const c)
 {
- int new_channel = set_tx_channel(device_num,c->opt_txchan);
- ignore_timing(c->opt_ignoreclock);
- fake_fast_clock(c->opt_fakefastclock);
+    set_tx_channel(device_num, c->opt_txchan);
+    ignore_timing(c->opt_ignoreclock);
+    fake_fast_clock(c->opt_fakefastclock);
 }
 
-/* Look up messages with MessageTrans */
+/*
+ * load_messages_choiceswin
+ * Look up messages with MessageTrans and update gadget labels.
+ */
 void load_messages_choiceswin(void)
 {
-  /* Debug */
-  _kernel_oserror *err;
+    _kernel_oserror *err;
 
-  /* Load Messages file and save pointer to control block */
-  msgs_init();
-  msgtrans_control_block *cb;
-  cb = msgs_main_control_block();
+    // Set window and gadget text
+    err = window_set_title(0, window_id_choices, msgs_lookup("Choices|1:Choices"));
+    button_set_value(0, window_id_choices, Gadget_Choices_TxChanLabel,
+                     msgs_lookup("Choices|4:Tx Channel"));
+    actionbutton_set_text(0, window_id_choices, Gadget_Choices_DefaultButton,
+                          msgs_lookup("Choices|12:Default"));
+    actionbutton_set_text(0, window_id_choices, Gadget_Choices_SaveButton,
+                          msgs_lookup("Choices|14:Save"));
+    actionbutton_set_text(0, window_id_choices, Gadget_Choices_CancelButton,
+                          msgs_lookup("Choices|16:Cancel"));
+    actionbutton_set_text(0, window_id_choices, Gadget_Choices_SetButton,
+                          msgs_lookup("Choices|18:Set"));
+    optionbutton_set_label(0, window_id_choices, Gadget_Choices_AltNoteOff,
+                           msgs_lookup("Choices|6:Zero Velocity Note Off"));
+    optionbutton_set_label(0, window_id_choices, Gadget_Choices_IgnoreClock,
+                           msgs_lookup("Choices|8:Ignore Clock Messages"));
+    optionbutton_set_label(0, window_id_choices, Gadget_Choices_FakeFastClock,
+                           msgs_lookup("Choices|10:Fake Fast Clock"));
 
-  /* Set window and gadget text */
-  err = window_set_title(0,window_id_choices,msgs_lookup("Choices|1:Choices"));
-  button_set_value(0,window_id_choices,Gadget_Choices_TxChanLabel,
-  	     	   msgs_lookup("Choices|4:Tx Channel"));
-  actionbutton_set_text(0,window_id_choices,Gadget_Choices_DefaultButton,
-  	       	   msgs_lookup("Choices|12:Default"));
-  actionbutton_set_text(0,window_id_choices,Gadget_Choices_SaveButton,
-  	       	   msgs_lookup("Choices|14:Save"));
-  actionbutton_set_text(0,window_id_choices,Gadget_Choices_CancelButton,
-  	       	   msgs_lookup("Choices|16:Cancel"));
-  actionbutton_set_text(0,window_id_choices,Gadget_Choices_SetButton,
-  	       	   msgs_lookup("Choices|18:Set"));
-  optionbutton_set_label(0,window_id_choices,Gadget_Choices_AltNoteOff,
-  	       	   msgs_lookup("Choices|6:Zero Velocity Note Off"));
-  optionbutton_set_label(0,window_id_choices,Gadget_Choices_IgnoreClock,
-  	       	   msgs_lookup("Choices|8:Ignore Clock Messages"));
-  optionbutton_set_label(0,window_id_choices,Gadget_Choices_FakeFastClock,
-  	       	   msgs_lookup("Choices|10:Fake Fast Clock"));
+    // Set help text
+    gadget_set_help_message(0, window_id_choices, Gadget_Choices_TxChan,
+                            msgs_lookup("Choices|2:Unable to get help."));
+    gadget_set_help_message(0, window_id_choices, Gadget_Choices_AltNoteOff,
+                            msgs_lookup("Choices|5:Unable to get help."));
+    gadget_set_help_message(0, window_id_choices, Gadget_Choices_IgnoreClock,
+                            msgs_lookup("Choices|7:Unable to get help."));
+    gadget_set_help_message(0, window_id_choices, Gadget_Choices_FakeFastClock,
+                            msgs_lookup("Choices|9:Unable to get help."));
+    gadget_set_help_message(0, window_id_choices, Gadget_Choices_DefaultButton,
+                            msgs_lookup("Choices|11:Unable to get help."));
+    gadget_set_help_message(0, window_id_choices, Gadget_Choices_SaveButton,
+                            msgs_lookup("Choices|13:Unable to get help."));
+    gadget_set_help_message(0, window_id_choices, Gadget_Choices_CancelButton,
+                            msgs_lookup("Choices|15:Unable to get help."));
+    gadget_set_help_message(0, window_id_choices, Gadget_Choices_SetButton,
+                            msgs_lookup("Choices|17:Unable to get help."));
 
-  /* Set help text */
-  gadget_set_help_message(0,window_id_choices,Gadget_Choices_TxChan,
-  	     	  	  msgs_lookup("Choices|2:Unable to get help."));
-  gadget_set_help_message(0,window_id_choices,Gadget_Choices_AltNoteOff,
-  	     	  	  msgs_lookup("Choices|5:Unable to get help."));
-  gadget_set_help_message(0,window_id_choices,Gadget_Choices_IgnoreClock,
-  	     	  	  msgs_lookup("Choices|7:Unable to get help."));
-  gadget_set_help_message(0,window_id_choices,Gadget_Choices_FakeFastClock,
-  	     	  	  msgs_lookup("Choices|9:Unable to get help."));
-  gadget_set_help_message(0,window_id_choices,Gadget_Choices_DefaultButton,
-  	     	  	  msgs_lookup("Choices|11:Unable to get help."));
-  gadget_set_help_message(0,window_id_choices,Gadget_Choices_SaveButton,
-  	     	  	  msgs_lookup("Choices|13:Unable to get help."));
-  gadget_set_help_message(0,window_id_choices,Gadget_Choices_CancelButton,
-  	     	  	  msgs_lookup("Choices|15:Unable to get help."));
-  gadget_set_help_message(0,window_id_choices,Gadget_Choices_SetButton,
-  	     	  	  msgs_lookup("Choices|17:Unable to get help."));
-
-  if (err != NULL) {
-    report_printf("MidiMon: err: in load_messages_choiceswin - %d %s",err->errnum,err->errmess);
-  }
-
-  msgtrans_close_file(cb); /* close Messages file */
+    if (err != NULL) {
+        report_printf("MidiMon: err: in load_messages_choiceswin - %d %s", err->errnum,
+                      err->errmess);
+    }
 }

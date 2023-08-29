@@ -1,0 +1,122 @@
+/* Copyright 2023 Lauren Rad
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+/*
+ * Application: !Midimon
+ * Author: Lauren Rad
+ * File: iconbar.c
+ * Description: Handlers for Iconbar icon and associated menus.
+*/
+
+#include "kernel.h"
+#include "swis.h"
+#include "toolbox.h"
+#include "event.h"
+#include "menu.h"
+
+// MidiMon stuff
+#include "common.h"
+#include "midi.h"
+#include "preporter.h"
+#include "monitorwin.h"
+#include "choices.h"
+
+/*
+ * Everything in this file besides panic currently pertains to multi-device selection, which
+ * is disabled in this release as hardware and module issues prevented me from working it out
+ * properly. However, I'm leaving the code in, in case some enterprising person with two
+ * working MIDI interfaces wants to implement this.
+ */
+
+/*
+ * device_selection
+ * This handler is called when an item in the device menu is selected.
+ * It both updates the menu and attempts to set the active device.
+ */
+int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+    device_num = id_block->self_component;      // set global device num
+    for (int i = 0; i < 4; i++) {
+        menu_set_tick(0, id_block->self_id, i, 0);      // first, untick all menu items
+    }
+    menu_set_tick(0, id_block->self_id, device_num, 1); // then tick the selected menu item
+    /*
+     * Tell the monitor window to update its device display, if it's been opened.
+     * Devices are numbered 1-4 here.
+     */
+    update_device_display();
+    clear_rx_buf(device_num);   // clear device rx buffer
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: Device num set to %d and buffer cleared.", device_num);
+#endif
+    set_tx_channel(device_num, global_choices.opt_txchan);      // set tx channel
+
+    return 1;
+}
+
+/*
+ * update_devices_menu
+ * This handler is called when the device menu is shown.
+ * It then attempts to update the list of devices.
+ * The module documentation isn't clear but this is making the assumption that
+ * available devices are contiguous, since there is no 'official' way
+ * to check anything other than the number of devices currently.
+ * Actually, fact check the above. I think this is different in the newer version
+ * of the module.
+ */
+int update_devices_menu(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+    const int MAX_DEVICES = 4;  // this is hardcoded into the module
+    const int PRODNAME_LENGTH = 50;     // this is set in the res file
+    ObjectId menu_id = id_block->self_id;
+    int devices = device_count();
+    char entrystring[PRODNAME_LENGTH];
+    char *prodname;
+
+    /*
+     * Fade/unfade based on available devices.
+     * Obviously, this makes the assumption that the component IDs in the
+     * menu are set up correctly. So don't break them :3
+     */
+    for (int component = 0; component < MAX_DEVICES; component++) {
+        if (component < devices) {
+            menu_set_fade(0, menu_id, component, 0);    // unfade
+            prodname = get_product_name(component + 1); // devices are numbered 1-4 here
+            snprintf(entrystring, PRODNAME_LENGTH, "%d %s", component + 1, prodname);
+            menu_set_entry_text(0, menu_id, component, entrystring);
+        } else {
+            menu_set_fade(0, menu_id, component, 1);    // fade
+        }
+    }
+    for (int i = 0; i < 4; i++) {
+        menu_set_tick(0, menu_id, i, 0);        // untick all devices...
+    }
+    if (device_num != -1) {
+        menu_set_tick(0, menu_id, device_num, 1);       // and tick the selected device
+    }
+
+    return 1;
+}
+
+/*
+ * midi_panic
+ * This handler is called when the Panic menu item in the Iconbar is clicked.
+ * It calls reset_midi to reset the state of the MIDI module.
+ */
+int midi_panic(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+    reset_midi();
+    return 1;
+}

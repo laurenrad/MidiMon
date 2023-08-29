@@ -1,10 +1,17 @@
 /------------------\
 | Part 1 - General |
 \------------------/
-- Line length is to be 100.
-- The app name is MidiMon (MIDI is not cased as an acronym as it looks   better this way)
+- Code can use any C99 features available in the Acorn/Norcroft C compiler.
+- The app name is MidiMon (MIDI is not cased as an acronym as it looks better this way)
 - Reporter output: all reporter output should start with "MidiMon:" unless it is continuing a
   previous message, in which case it should indent with two spaces. A compile-time option will    turn on/off any messages which are useful only for debug.
+- Code is formatted with GNU indent using the following options:
+   -linux -cdb -sc -nut -i4 -l100
+- To facilitate the above:
+   * Indent gets confused on pointer syntax for typedefs. Not sure how to handle other
+     than look out and fix these manually right now.
+   * Use C++ style comments for inline or single-line comments.
+- This code was written in Zap, with 4 char column tabs (using spaces).
 
 /----------------------\
 | Part 2 - File Naming |
