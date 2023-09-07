@@ -26,5 +26,6 @@
 #include "toolbox.h"
 
 int window_piano_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int key_pressed(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
 
 #endif

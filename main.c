@@ -61,6 +61,7 @@ int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, v
 int quit_event(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int show_help(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+//int pollword_nonzero(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
 int quit_message(WimpMessage *message, void *handle);
 void register_handlers(void);
 
@@ -90,7 +91,9 @@ int main(void)
      * - Lose_Caret
      * - Gain_Caret
      */
-    event_set_mask(0x1831);
+    //event_set_mask(0x1831);
+    event_set_mask(0x400001);
+
 
     register_handlers();        // Register event and message handlers
 
@@ -145,10 +148,23 @@ int main(void)
      cb = msgs_main_control_block(); // save pointer to control block
 
     /*
+     *  Prepare to communicate with moddules
+     */
+     int pollword;
+    _swi(MIDIEvent_GetPollWord, _OUT(0), &pollword);
+    report_printf("got pollword address %d\n",pollword);
+
+    _swi(MIDIEvent_ClearPollWord, _IN(0), 0);
+
+    /*
      * Begin poll loop
      */
     while (!quit) {
-        event_poll(&event_code, &poll_block, 0);
+        //err = event_poll(&event_code, &poll_block, (void *)pollword_addr);
+        err = event_poll(&event_code, &poll_block, (void *)pollword);
+        if (err != NULL) {
+            report_printf("Poll error: %d %s\n",err->errnum,err->errmess);
+        }
     }
 
     msgtrans_close_file(cb); // close Messages file
@@ -206,6 +222,20 @@ int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, v
 }
 
 /*
+int pollword_nonzero(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
+{
+    report_printf("pollword was nonzero");
+    _swi(0x5A4C1, _IN(0), 0);
+
+    int key_num, driver_id, state;
+    _swi(0x5A4C2, _OUTR(0,2), &key_num, &driver_id, &state);
+
+    report_printf("keypress: %d %d %d\n",key_num,driver_id,state);
+    return 1;
+}
+*/
+
+/*
  * register_handlers
  * Registers various event handlers for the application.
  */
@@ -243,4 +273,10 @@ void register_handlers(void)
     event_register_message_handler(Message_MIDIDying, midi_dying, 0);
     event_register_message_handler(Message_MIDIDevConnect, midi_dev_connected, 0);
     event_register_message_handler(Message_MIDIDevDisconnect, midi_dev_disconnected, 0);
+
+    /*
+     * Wimp event handlers
+     */
+    event_register_wimp_handler(-1, Wimp_EPollWordNonZero, key_pressed, NULL);
+    event_register_wimp_handler(-1, Wimp_EPollWordNonZero, midi_incoming, NULL);
 }

@@ -42,20 +42,11 @@
 /*
  * These structs correspond to the data coming from the KeyEvent helper module.
  */
-typedef struct KeyUpData {
+typedef struct KeyEventData {
     char key_num;               // see PRM 1-158
     int driver_id;
     int state;                  // 0 = up, 1 = down
-} KeyUpData;
-
-typedef struct KeyUpMessage {
-    int size;
-    int sender;
-    int my_ref;
-    int your_ref;
-    int action_code;
-    KeyUpData key_data;
-} KeyUpMessage;
+} KeyEventData;
 
 #define KEY_COUNT   24
 #define BASE_NOTE   60          // Note number of the lowest C on the piano
@@ -98,7 +89,7 @@ static bool piano_opened = false;       // Track if we know the window ID yet
 static int keys_pressed[KEY_COUNT];     // keep track of what keys are down.
 
 int slider_valuechange(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int key_pressed(WimpMessage *message, void *handle);
+int key_pressed(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
 int key_clicked(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
 int slider_snap(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
 void load_messages_pianowin(void);
@@ -126,7 +117,6 @@ int window_piano_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, 
         event_register_toolbox_handler(-1, Slider_ValueChanged, slider_valuechange, NULL);
         event_register_wimp_handler(-1, Wimp_EMouseClick, key_clicked, 0);
         event_register_wimp_handler(-1, Wimp_EMouseClick, slider_snap, 0);
-        event_register_message_handler(Message_KeyEvent, key_pressed, 0);
     }
 
     return 1;
@@ -152,158 +142,169 @@ int slider_valuechange(int event_code, ToolboxEvent *event, IdBlock *id_block, v
 
 /*
  * int key_pressed
- * This responds to KeyEvent messages from the included KeyEvent module.
- * This is nonstandard but it allows the program t respond to key up events
+ * This is a handler for a nonzero pollword; to keep it simple the pollword is a single
+ * word which the module will set depending on the event. Then, if it's a key event
+ * this handler will call a SWI to get info from the key buffer.
+ * The way all this works is nonstandard but it allows the program to respond to key up events
  * and ignore key repeat.
- * The main disadvantage to this solution is it is tied to the QWERTY layout
- * and it doesn't know or care about the caret.
+ * The main disadvantage currently is that this is tied to a QWERTY layout and doesn't know
+ * necessarily handle the caret properly.
  */
-int key_pressed(WimpMessage *message, void *handle)
+int key_pressed(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
 {
+    WimpPollWordNonZeroEvent *e = (WimpPollWordNonZeroEvent *)event;
+    int pword = e->poll_word_contents;
     ComponentId component = 0;
     int note = 0;
     int octave = get_octave();
     int velocity = get_velocity();
-    KeyUpData d = ((KeyUpMessage *) message)->key_data;
+    int key_num, state;
 
-    if (piano_opened == false) {
-        return 1;  // only do something if the window has been opened yet
-    }
+    if (pword == MIDIEvent_KeyEvent) {
+        _swi(MIDIEvent_GetKeypress,_OUT(0)|_OUT(2),&key_num,&state);
+        _swi(MIDIEvent_ClearPollWord, _IN(0), 0); // reset pollword
 
-    if (!hotkeys_enabled() && !has_caret()) {
-        return 1;  // also don't do anything if hotkeys are off and we don't have the caret
-    }
+        if (piano_opened == false) {
+            return 1;  // only do something if the window has been opened yet
+        }
 
-    /*
-     * Then, check for the special case of a mouse up event.
-     * This should be more elegant.
-     */
-    if (d.key_num == MOUSE_SELECT || d.key_num == MOUSE_ADJUST) {
-        if (d.state == 0) {
-            for (int i = 0; i < KEY_COUNT; i++) {
-                if (keys_pressed[i] == 1) {
-                    keys_pressed[i] = 0;
-                    tx_noteoff(60 + i, velocity, octave); // offset from base note
+        if (!hotkeys_enabled() && !has_caret()) {
+            return 1;  // also don't do anything if hotkeys are off and we don't have the caret
+        }
+
+        /*
+        * Then, check for the special case of a mouse up event.
+        * This should be more elegant.
+        */
+        if (key_num == MOUSE_SELECT || key_num == MOUSE_ADJUST) {
+            if (state == 0) {
+                for (int i = 0; i < KEY_COUNT; i++) {
+                    if (keys_pressed[i] == 1) {
+                        keys_pressed[i] = 0;
+                        tx_noteoff(60 + i, velocity, octave); // offset from base note
+                    }
                 }
             }
+            return 1; // done and handled
         }
-        return 1; // done and handled
-    }
 
-    /*
-     * Otherwise, check the key number and set the note accordingly
-     */
-    switch (d.key_num) {
-    case KEY_Q:
-        component = Gadget_Keys_C1;
-        note = 60;
-        break;
-    case KEY_2:
-        component = Gadget_Keys_Db1;
-        note = 61;
-        break;
-    case KEY_W:
-        component = Gadget_Keys_D1;
-        note = 62;
-        break;
-    case KEY_3:
-        component = Gadget_Keys_Eb1;
-        note = 63;
-        break;
-    case KEY_E:
-        component = Gadget_Keys_E1;
-        note = 64;
-        break;
-    case KEY_R:
-        component = Gadget_Keys_F1;
-        note = 65;
-        break;
-    case KEY_5:
-        component = Gadget_Keys_Gb1;
-        note = 66;
-        break;
-    case KEY_T:
-        component = Gadget_Keys_G1;
-        note = 67;
-        break;
-    case KEY_6:
-        component = Gadget_Keys_Ab1;
-        note = 68;
-        break;
-    case KEY_Y:
-        component = Gadget_Keys_A1;
-        note = 69;
-        break;
-    case KEY_7:
-        component = Gadget_Keys_Bb1;
-        note = 70;
-        break;
-    case KEY_U:
-        component = Gadget_Keys_B1;
-        note = 71;
-        break;
-    case KEY_Z:
-        component = Gadget_Keys_C2;
-        note = 72;
-        break;
-    case KEY_S:
-        component = Gadget_Keys_Db2;
-        note = 73;
-        break;
-    case KEY_X:
-        component = Gadget_Keys_D2;
-        note = 74;
-        break;
-    case KEY_D:
-        component = Gadget_Keys_Eb2;
-        note = 75;
-        break;
-    case KEY_C:
-        component = Gadget_Keys_E2;
-        note = 76;
-        break;
-    case KEY_V:
-        component = Gadget_Keys_F2;
-        note = 77;
-        break;
-    case KEY_G:
-        component = Gadget_Keys_Gb2;
-        note = 78;
-        break;
-    case KEY_B:
-        component = Gadget_Keys_G2;
-        note = 79;
-        break;
-    case KEY_H:
+        /*
+        * Otherwise, check the key number and set the note accordingly
+        */
+        switch (key_num) {
+        case KEY_Q:
+            component = Gadget_Keys_C1;
+            note = 60;
+            break;
+        case KEY_2:
+            component = Gadget_Keys_Db1;
+            note = 61;
+            break;
+        case KEY_W:
+            component = Gadget_Keys_D1;
+            note = 62;
+            break;
+        case KEY_3:
+            component = Gadget_Keys_Eb1;
+            note = 63;
+            break;
+        case KEY_E:
+            component = Gadget_Keys_E1;
+            note = 64;
+            break;
+        case KEY_R:
+            component = Gadget_Keys_F1;
+            note = 65;
+            break;
+        case KEY_5:
+            component = Gadget_Keys_Gb1;
+            note = 66;
+            break;
+        case KEY_T:
+            component = Gadget_Keys_G1;
+            note = 67;
+            break;
+        case KEY_6:
+            component = Gadget_Keys_Ab1;
+            note = 68;
+            break;
+        case KEY_Y:
+            component = Gadget_Keys_A1;
+            note = 69;
+            break;
+        case KEY_7:
+            component = Gadget_Keys_Bb1;
+            note = 70;
+            break;
+        case KEY_U:
+            component = Gadget_Keys_B1;
+            note = 71;
+            break;
+        case KEY_Z:
+            component = Gadget_Keys_C2;
+            note = 72;
+            break;
+        case KEY_S:
+            component = Gadget_Keys_Db2;
+            note = 73;
+            break;
+        case KEY_X:
+            component = Gadget_Keys_D2;
+            note = 74;
+            break;
+        case KEY_D:
+            component = Gadget_Keys_Eb2;
+            note = 75;
+            break;
+        case KEY_C:
+            component = Gadget_Keys_E2;
+            note = 76;
+            break;
+        case KEY_V:
+            component = Gadget_Keys_F2;
+            note = 77;
+            break;
+        case KEY_G:
+            component = Gadget_Keys_Gb2;
+            note = 78;
+            break;
+        case KEY_B:
+            component = Gadget_Keys_G2;
+            note = 79;
+            break;
+        case KEY_H:
         component = Gadget_Keys_Ab2;
         note = 80;
         break;
-    case KEY_N:
-        component = Gadget_Keys_A2;
-        note = 81;
-        break;
-    case KEY_J:
-        component = Gadget_Keys_Bb2;
-        note = 82;
-        break;
-    case KEY_M:
-        component = Gadget_Keys_B2;
-        note = 83;
-        break;
-    default:
-        return 1;               // unhandled key, just return
-        break;
+        case KEY_N:
+            component = Gadget_Keys_A2;
+            note = 81;
+            break;
+        case KEY_J:
+            component = Gadget_Keys_Bb2;
+            note = 82;
+            break;
+        case KEY_M:
+            component = Gadget_Keys_B2;
+            note = 83;
+            break;
+        default:
+            return 1;               // unhandled key, just return
+            break;
+        }
+
+        if (state == 0) {         // key up, clear bit 21 (selected bit) for the given button
+            button_set_flags(0, window_id_piano, component, 0x200000, 0x0);
+            tx_noteoff(note, velocity, octave);     // send note off message for this note
+        } else {                    // key down, set bit 21 (selected bit) for the given button
+            button_set_flags(0, window_id_piano, component, 0x200000, 0x200000);
+            tx_noteon(note, velocity, octave);      // send note on message for this note
+        }
+
+        return 1;
     }
 
-    if (d.state == 0) {         // key up, clear bit 21 (selected bit) for the given button
-        button_set_flags(0, window_id_piano, component, 0x200000, 0x0);
-        tx_noteoff(note, velocity, octave);     // send note off message for this note
-    } else {                    // key down, set bit 21 (selected bit) for the given button
-        button_set_flags(0, window_id_piano, component, 0x200000, 0x200000);
-        tx_noteon(note, velocity, octave);      // send note on message for this note
-    }
-
-    return 1;
+    return 0; // if this wasn't a key event, pass it along
 }
 
 /*

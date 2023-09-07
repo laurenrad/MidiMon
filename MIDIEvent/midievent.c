@@ -13,8 +13,9 @@
  * limitations under the License.
  */
 
- /* This is the most rudimentary possible module to just emit a Wimp
-    user message in response to a Event 17 (MIDI Event). */
+ /* This is a helper module for MidiMon, to allow it to be notified of incoming
+    key and MIDI events and service calls.*/
+
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -26,43 +27,43 @@
 #define EnableEvent	14
 #define DisableEvent	13
 
-/* Message definitions. Both Service_MIDI and Event_MIDI can give device connect/disconnect,
-   but Event_MIDI will be providing them in this module. */
-#define Message_MIDIDataReceived       	0x5A4C0 /* MIDI event has been received */
-#define Message_MIDIError		0x5A4C1 /* An error has occurred in the background */
-#define Message_MIDIDevConnect		0x5A4C2 /* A USB MIDI device has been connected. */
-#define Message_MIDIDevDisconnect	0x5A4C3 /* A USB MIDI device has been disconnected. */
-#define Message_MIDIInit		0x5A4C4 /* USB MIDI module has initialised */
-#define Message_MIDIDying		0x5A4C5 /* USB MIDI module is dying */
+/* This is the newly rewritten module that combines key and MIDI events in a way that is,
+ * hopefully, "legal" (unlike the last version). This doesn't currently buffer keypresses
+ * which it needs to be reworked to do but this was a quick fix.
+ */
 
-/* Definition of the message's structure; Data is unused in all cases currently and will be 0.
-   The rationale over using a reason code scheme with a single message type as with the service
-   and event is this allows separate handlers to be registered which is cleaner and more convenient.
-*/
-typedef struct WimpMidiMessage {
-  int size;
-  int sender;
-  int my_ref;
-  int your_ref;
-  int action_code;
-  int data;
-} WimpMidiMessage;
+typedef struct KeyEventData {
+  int key_num; /* see PRM 1-158 */
+  int driver_id;
+  int state; /* 0 = up, 1 = down */
+} KeyEventData;
 
-extern void midi_entry(void);
-int midi_handler(_kernel_swi_regs *r, void *pw);
+typedef struct MidiEventData {
+    int event;
+} MidiEventData;
+
+#define ErrorBadSWI ((_kernel_oserror *) -1)
+
+static int pollword; // for now: 0=clear, 1=keyevent, 2=midievent
+static KeyEventData key = {0,0,0};
+static MidiEventData midi;
+
+extern void event_entry(void);
+void service_handler(int service_number, _kernel_swi_regs *r, void *pw);
+int event_handler(_kernel_swi_regs *r, void *pw);
 
 #define IGNORE(x) do { (void)(x); } while(0)
 
 static void claim_event(void *pw)
 {
-  _swix(OS_Claim, _INR(0,2), EventV, midi_entry, pw);
+  _swix(OS_Claim, _INR(0,2), EventV, event_entry, pw);
   _swix(OS_Byte, _INR(0,1), EnableEvent, EventMidi);
 }
 
 static void release_event(void *pw)
 {
   _swix(OS_Byte, _INR(0,1), DisableEvent, EventMidi);
-  _swix(OS_Release, _INR(0,2), EventV, midi_entry, pw);
+  _swix(OS_Release, _INR(0,2), EventV, event_entry, pw);
 }
 
 _kernel_oserror *midievent_init(char *cmd_tail, int podule_base, void *pw)
@@ -82,73 +83,79 @@ _kernel_oserror *midievent_final(int fatal, int podule, void *pw)
   return NULL;
 }
 
+_kernel_oserror *midievent_swi(int swi_offset, _kernel_swi_regs *r, void *pw)
+{
+    IGNORE(pw);
+    switch (swi_offset) {
+        case 0: // MIDIEvent_GetPollWord &5A4C0
+            r->r[0] = (int)&pollword;
+        break;
+        case 1: // MIDIEvent_ClearPollWord &5A4C0
+            pollword = 0;
+        break;
+        case 2: // MIDIEvent_GetKeypress &5A4C2
+            r->r[0] = key.key_num;
+            r->r[1] = key.driver_id;
+            r->r[2] = key.state;
+        break;
+        case 3: // MIDIEvent_GetMIDIEvent &5A4C3
+            r->r[0] = midi.event;
+        default:
+            return ErrorBadSWI;
+        break;
+    }
+
+    return NULL;
+}
+
+
 /* Handler for MIDI-related service calls */
+/* The numbers this puts in midi.event are nonstandard, but some remapping had to be
+   done to notify of MIDI service calls and events in the same status word. */
 void service_handler(int service_number, _kernel_swi_regs *r, void *pw)
 {
   IGNORE(pw);
 
-  WimpMidiMessage m;
-  m.size = sizeof(m);
-  m.sender = 0;
-  m.my_ref = 0;
-  m.your_ref = 0;
-  m.data = 0;
-
   switch (r->r[0]) {
     case 0:
-    	 m.action_code = Message_MIDIInit;
+        midi.event = 20; // module initialised
     break;
     case 1:
-    	 m.action_code = Message_MIDIDying;
+        midi.event = 21; // module dying
     break;
     default:
-    	 /* If it's anything else just return without claiming svc or sending a message */
-    	 r->r[0] = 1;
-    	 return;
+        midi.event = -1; // Unknown
     break;
   }
-
-  _swix(Wimp_SendMessage,_INR(0,2),17,&m,0);
 
   r->r[0] = 1; /* Do not claim service */
 }
 
-extern int midi_handler(_kernel_swi_regs *r, void *pw)
+int event_handler(_kernel_swi_regs *r, void *pw)
 {
   IGNORE(pw);
   IGNORE(r);
-
-  WimpMidiMessage m;
-  m.size = sizeof(m);
-  m.sender = 0; /* this is a module, so zero? */
-  m.my_ref = 0; /* this should be filled in by the Wimp */
-  m.your_ref = 0;
-  m.data = 0;
-
-  switch (r->r[1]) {
-    case 0:
-    	 m.action_code = Message_MIDIDataReceived;
-    break;
-    case 1:
-    	 m.action_code = Message_MIDIError;
-    break;
-    case 10:
-    	 m.action_code = Message_MIDIDevConnect;
-    break;
-    case 11:
-    	 m.action_code = Message_MIDIDevDisconnect;
-    break;
-    default:
-    	 /* This shouldn't happen but if it does, just return without sending. */
-    	 return 1;
-    break;
+  KeyEventData k;
+  switch (r->r[0]) {
+      case 11: // Key event
+        /* Store key info from regs to be sent on request */
+        key.state = r->r[1];
+        key.key_num = r->r[2];
+        key.driver_id = r->r[3];
+        pollword = 1;
+      break;
+      case 17: // MIDI event
+        /* Here are the relevant events that can happen here:
+         * 0:  MIDI Data Received
+         * 1:  MIDI Error
+         * 10: MIDI Device Connect
+         * 11: MIDI Device Disconnect
+         */
+        midi.event = r->r[1];
+        pollword = 2;
+      break;
+      default:
+      break;
   }
-
-  _swix(Wimp_SendMessage,_INR(0,2),17,&m,0);
-
   return 1;
 }
-
-
-
-

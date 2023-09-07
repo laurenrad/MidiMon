@@ -1,2 +1,0 @@
-# By default, the shared makefiles assume any module has a Messages file.
-# If you don't want this, set RES_OBJ to an empty string in the Makefile.

@@ -55,7 +55,6 @@ static ObjectId window_id_main; // Toolbox Object ID of monitor window
 static bool monitor_opened = false;     // Track if the window has been opened yet
 
 int clear_scrolllist(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int handle_incoming(WimpMessage *message, void *handle);
 int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 void load_messages_monitorwin(void);
@@ -78,7 +77,6 @@ int window_monitor_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block
         event_register_toolbox_handler(-1, Event_Monitor_ClearLog, clear_scrolllist, NULL);
         event_register_toolbox_handler(-1, Event_Monitor_Test, test_button_click, NULL);
         event_register_toolbox_handler(-1, SaveAs_SaveToFile, save_log_text, NULL);
-        event_register_message_handler(Message_MIDIDataReceived, handle_incoming, 0);
     }
 
     return 1;
@@ -96,23 +94,28 @@ int clear_scrolllist(int event_code, ToolboxEvent *event, IdBlock *id_block, voi
 }
 
 /*
- * handle_incoming
- * This handles incoming events from the MidiEvent helper module.
+ * midi_incoming
+ * Handle incoming MIDI notifications from the helper module.
  */
-int handle_incoming(WimpMessage *message, void *handle)
+int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
 {
-    char printbuf[MaxLine];     // MaxLine is in common.h
-
+    WimpPollWordNonZeroEvent *e = (WimpPollWordNonZeroEvent *)event;
+    int pword = e->poll_word_contents;
+    char printbuf[MaxLine];
     int command;
 
-    // bits 24-25 are number of bytes in the command
-    while (((command = read_rx_command(device_num)) >> 24 & 3) != 0) {
-        parse_command(command, printbuf, MaxLine);
-        scrolllist_add_item(ScrollList_AddItem_MakeVisible, window_id_main,
-                            Gadget_Monitor_ScrollList, printbuf, NULL, NULL, -1);
+    if (pword == MIDIEvent_MIDIEvent) {
+        _swi(MIDIEvent_ClearPollWord, _IN(0), 0); // reset pollword
+        // bits 24-25 are number of bytes in the command
+        while (((command = read_rx_command(device_num)) >> 24 & 3) != 0) {
+            parse_command(command, printbuf, MaxLine);
+            scrolllist_add_item(ScrollList_AddItem_MakeVisible, window_id_main,
+                                Gadget_Monitor_ScrollList, printbuf, NULL, NULL, -1);
+        }
+        return 1;
     }
 
-    return 1;
+    return 0; // if this wasn't a midi event, return 0 by default to pass it along
 }
 
 /*

@@ -1,9 +1,11 @@
+; allocated block: &5A4C0-&5A4FF
 title-string:	MIDIEvent
-help-string:	MIDIEvent 0.95 © Lauren Rad
+help-string:	MIDIEvent 0.991 © Lauren Rad
 date-string: 27 Apr 2023
 
-event-handler: midi_entry/midi_handler 17 ; should use preprocessor to sub event num later
+event-handler: event_entry/event_handler 11 17
 service-call-handler: service_handler 88 ; Service_MIDI
-
 initialisation-code: midievent_init
 finalisation-code: midievent_final
+swi-chunk-base-number: 0x5A4C0
+swi-handler-code: midievent_swi

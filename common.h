@@ -34,6 +34,16 @@ extern int device_num;
  * here to watch out for any clashes.
  */
 
+/* SWIs for helper module */
+#define MIDIEvent_GetPollWord   0x5A4C0
+#define MIDIEvent_ClearPollWord 0x5A4C1
+#define MIDIEvent_GetKeypress   0x5A4C2
+#define MIDIEvent_GetMIDIEvent  0x5A4C3
+
+/* Other helper module constants */
+#define MIDIEvent_KeyEvent      1
+#define MIDIEvent_MIDIEvent     2
+
 /* Events - Window show */
 #define Event_Windows_ShowMonitor	0xF10   // Main window is shown
 #define Event_Windows_ShowSong		0xF11   // Song Control window is shown
