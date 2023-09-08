@@ -498,13 +498,34 @@ void parse_command(int command, char *buf, int buf_size)
     /*
      * unpack the message
      */
-    int status = (command & 0xFF);      // byte 0: status byte
-    int size = (command >> 24 & 3);     // bits 24-25 are size of command
-    int data1 = (command >> 8 & 0xFF);  // byte 1: data byte 1
-    int data2 = (command >> 16 & 0xFF); // byte 2: data byte 2
+    unsigned int status = (unsigned int)command & 0xFF;      // byte 0: status byte
+    unsigned int size = ((unsigned int)command >> 24) & 3;     // bits 24-25 are size of command
+    unsigned int data1 = ((unsigned int)command >> 8) & 0xFF;  // byte 1: data byte 1
+    unsigned int data2 = ((unsigned int)command >> 16) & 0xFF; // byte 2: data byte 2
     int channel;
+    static int in_sysex = 0; // are we in the middle of SysEx?
+    int buflen = 0; // track used buffer length
 
-    if (status >= 0x80 && status <= 0xEF) {     // channel-specific
+#ifdef REPORTER_DEBUG
+    report_printf("parsing command. in_sysex=%d status=%x size=%x data1=%x data2=%x", in_sysex, status, size, data1, data2);
+#endif
+    if (in_sysex) { // handle sysex bytes until done
+        buflen += snprintf(buf, buf_size, "[System Exclusive] ");
+        for (int i = 0; i < size; i++) {
+            status = command &0xFF;
+            if (status == 0xF7) {
+                in_sysex = 0;
+                snprintf(buf+(sizeof(char)*buflen),
+                        buf_size, " [System Exclusive End]");
+                break;
+            }
+
+            buflen += snprintf(buf+(sizeof(char)*buflen),
+                                buf_size, "0x%2x",status);
+            command >>= 8;
+        }
+    }
+    else if (status >= 0x80 && status <= 0xEF) {     // channel-specific
         channel = status & 0x0F;        // lower nibble is channel
         status = status & 0xF0; // higher nibble command
         switch (status) {
@@ -527,7 +548,7 @@ void parse_command(int command, char *buf, int buf_size)
             snprintf(buf, buf_size, "[Channel Pressure] Pressure=%d", data1);
             break;
         case 0xE0:             // Pitch Bend
-            snprintf(buf, buf_size, "[Pitch Bend] LSB=%x MSB=%x", data1, data2);
+            snprintf(buf, buf_size, "[Pitch Bend] LSB=0x%2x MSB=0x%2x", data1, data2);
             break;
         default:
             snprintf(buf, buf_size, "Unknown command");
@@ -536,13 +557,14 @@ void parse_command(int command, char *buf, int buf_size)
     } else {                    // Not channel-specific
         switch (status) {
         case 0xF0:             // System Exclusive. Not fully implemented but at least reports that there was one
-            snprintf(buf, buf_size, "[System Exclusive] %x %x", data1, data2);
+            snprintf(buf, buf_size, "[System Exclusive] 0x%2x 0x%2x", data1, data2);
+            in_sysex = 1;
             break;
         case 0xF1:             // MTC Quarter Frame
-            snprintf(buf, buf_size, "MTC Quarter Frame: %x %x", data1, data2);
+            snprintf(buf, buf_size, "MTC Quarter Frame: 0x%2x %2x", data1, data2);
             break;
         case 0xF2:             // Song Position Pointer
-            snprintf(buf, buf_size, "[Song Position] LSB=%x MSB=%x", data1, data2);
+            snprintf(buf, buf_size, "[Song Position] LSB=0x%2x MSB=0x%2x", data1, data2);
             break;
         case 0xF3:             // Song Select
             snprintf(buf, buf_size, "[Song Select] Song=%d", data1);
@@ -552,9 +574,6 @@ void parse_command(int command, char *buf, int buf_size)
             break;
         case 0xF6:             // Tune Request
             snprintf(buf, buf_size, "[Tune Request]");
-            break;
-        case 0xF7:             // System Exclusive End
-            snprintf(buf, buf_size, "[System Exclusive End]");
             break;
         case 0xF8:             // Clock
             snprintf(buf, buf_size, "Clock");
