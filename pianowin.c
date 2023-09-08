@@ -131,7 +131,7 @@ int slider_valuechange(int event_code, ToolboxEvent *event, IdBlock *id_block, v
 {
     if (id_block->self_component == Gadget_Piano_PitchBend) {
         int val;
-        slider_get_value(0, window_id_piano, Gadget_Piano_PitchBend, &val);
+        slider_get_value(0, tbar_id_v, Gadget_Piano_PitchBend, &val);
         tx_pitchwheel(val);
     } else {
         return 0;               // this wasn't for the pitch bend, so return unhandled
@@ -139,6 +139,41 @@ int slider_valuechange(int event_code, ToolboxEvent *event, IdBlock *id_block, v
 
     return 1;
 }
+
+/*
+ * slider_snap
+ * Another handler for Wimp_EMouseClick; this one doesn't claim the event so that key_clicked
+ * can still handle. Is this safe? I'm not sure but it seems to work, and this is the less
+ * important of the two so it's the one that doesn't claim. The purpose of this is to make
+ * the pitch bend slider snap back to the center, as these controls usually do.
+ * Currently, the mechanism for this is to release the slider and adjust click on it to reset.
+ * This isn't ideal but while the slider is dragged, an adjust click won't be recognised,
+ * so this is the best I can do for now.
+ */
+int slider_snap(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
+{
+    WimpMouseClickEvent *m = (WimpMouseClickEvent *) event;
+
+    if (piano_opened && id_block->parent_id == window_id_piano     // filter for pitch bend
+        && id_block->self_component == Gadget_Piano_PitchBend) {   // then for adjust clicks
+        if (m->buttons == 1) {
+            int current_val;
+            slider_get_value(0, id_block->self_id, Gadget_Piano_PitchBend, &current_val);
+            /*
+             * Only snap if it isn't already centered, or else nasty flickering will happen.
+             * Ok, nasty flickering still happens if you drag, but this at least eliminates it when
+             * the mouse is still.
+             */
+            if (current_val != 8192) {  // 8192 = middle value
+                slider_set_value(0, id_block->self_id, Gadget_Piano_PitchBend, 8192);
+                tx_pitchwheel(8192); // transmit this to end bending
+            }
+        }
+    }
+
+    return 0;
+}
+
 
 /*
  * int key_pressed
@@ -336,39 +371,6 @@ int key_clicked(int event_code, WimpPollBlock * event, IdBlock * id_block, void 
     }
 
     return 1;
-}
-
-/*
- * slider_snap
- * Another handler for Wimp_EMouseClick; this one doesn't claim the event so that key_clicked
- * can still handle. Is this safe? I'm not sure but it seems to work, and this is the less
- * important of the two so it's the one that doesn't claim. The purpose of this is to make
- * the pitch bend slider snap back to the center, as these controls usually do.
- * Currently, the mechanism for this is to release the slider and adjust click on it to reset.
- * This isn't ideal but while the slider is dragged, an adjust click won't be recognised,
- * so this is the best I can do for now.
- */
-int slider_snap(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
-{
-    WimpMouseClickEvent *m = (WimpMouseClickEvent *) event;
-
-    if (piano_opened && id_block->parent_id == window_id_piano     // filter for pitch bend
-        && id_block->self_component == Gadget_Piano_PitchBend) {   // then for adjust clicks
-        if (m->buttons == 1) {
-            int current_val;
-            slider_get_value(0, id_block->self_id, Gadget_Piano_PitchBend, &current_val);
-            /*
-             * Only snap if it isn't already centered, or else nasty flickering will happen.
-             * Ok, nasty flickering still happens if you drag, but this at least eliminates it when
-             * the mouse is still.
-             */
-            if (current_val != 8192) {  // 8192 = middle value
-                slider_set_value(0, id_block->self_id, Gadget_Piano_PitchBend, 8192);
-            }
-        }
-    }
-
-    return 0;
 }
 
 /* load_messages_pianowin

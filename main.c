@@ -148,7 +148,7 @@ int main(void)
      cb = msgs_main_control_block(); // save pointer to control block
 
     /*
-     *  Prepare to communicate with moddules
+     *  Prepare to communicate with modules
      */
      int pollword;
     _swi(MIDIEvent_GetPollWord, _OUT(0), &pollword);
@@ -160,7 +160,7 @@ int main(void)
      * Begin poll loop
      */
     while (!quit) {
-        //err = event_poll(&event_code, &poll_block, (void *)pollword_addr);
+
         err = event_poll(&event_code, &poll_block, (void *)pollword);
         if (err != NULL) {
             report_printf("Poll error: %d %s\n",err->errnum,err->errmess);
