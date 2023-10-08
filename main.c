@@ -154,7 +154,7 @@ int main(void)
     _swi(MIDIEvent_GetPollWord, _OUT(0), &pollword);
     report_printf("got pollword address %d\n",pollword);
 
-    _swi(MIDIEvent_ClearPollWord, _IN(0), 0);
+    //_swi(MIDIEvent_ClearPollWord, _IN(0), 0);
 
     /*
      * Begin poll loop
@@ -220,20 +220,6 @@ int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, v
 
     return 1;
 }
-
-/*
-int pollword_nonzero(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
-{
-    report_printf("pollword was nonzero");
-    _swi(0x5A4C1, _IN(0), 0);
-
-    int key_num, driver_id, state;
-    _swi(0x5A4C2, _OUTR(0,2), &key_num, &driver_id, &state);
-
-    report_printf("keypress: %d %d %d\n",key_num,driver_id,state);
-    return 1;
-}
-*/
 
 /*
  * register_handlers

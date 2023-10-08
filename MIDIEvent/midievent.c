@@ -26,31 +26,45 @@
 #define EventMidi	17
 #define EnableEvent	14
 #define DisableEvent	13
+#define BUFSIZE 10
 
 /* This is the newly rewritten module that combines key and MIDI events in a way that is,
- * hopefully, "legal" (unlike the last version). This doesn't currently buffer keypresses
- * which it needs to be reworked to do but this was a quick fix.
+ * hopefully, "legal" (unlike the last version).
  */
 
-typedef struct KeyEventData {
+typedef struct KeyEvent {
   int key_num; /* see PRM 1-158 */
   int driver_id;
   int state; /* 0 = up, 1 = down */
-} KeyEventData;
+} KeyEvent;
 
-typedef struct MidiEventData {
+/* MIDIEvents will be unbuffered, as new events can't fire
+   until the buffer is cleared anyway, and if there is a device
+   change or error that should take precedent. */
+typedef struct MIDIEvent {
     int event;
-} MidiEventData;
+} MIDIEvent;
+
+typedef struct PollWordData {
+    int nonzero;
+    int key_count;
+    int midi_count;
+} PollWordData;
 
 #define ErrorBadSWI ((_kernel_oserror *) -1)
 
-static int pollword; // for now: 0=clear, 1=keyevent, 2=midievent
-static KeyEventData key = {0,0,0};
-static MidiEventData midi;
+static PollWordData pollword = {0,0,0};
+static KeyEvent key = {0,0,0};
+static MIDIEvent midi = {0};
+static KeyEvent keybuf[BUFSIZE]; // key input buffer
+static int keybuf_write = 0; // keybuf write index
+static int keybuf_read = 0; // keybuf read index
 
 extern void event_entry(void);
 void service_handler(int service_number, _kernel_swi_regs *r, void *pw);
 int event_handler(_kernel_swi_regs *r, void *pw);
+int keybuf_put(int key_num, int driver_id, int state);
+int keybuf_get(KeyEvent *k);
 
 #define IGNORE(x) do { (void)(x); } while(0)
 
@@ -80,26 +94,48 @@ _kernel_oserror *midievent_final(int fatal, int podule, void *pw)
   IGNORE(fatal);
   IGNORE(podule);
   release_event(pw);
+
   return NULL;
 }
 
 _kernel_oserror *midievent_swi(int swi_offset, _kernel_swi_regs *r, void *pw)
 {
     IGNORE(pw);
+    KeyEvent k = {0,0,0};
+
     switch (swi_offset) {
         case 0: // MIDIEvent_GetPollWord &5A4C0
             r->r[0] = (int)&pollword;
         break;
-        case 1: // MIDIEvent_ClearPollWord &5A4C0
-            pollword = 0;
+        case 1: // MIDIEvent_GetKeypress &5A4C1
+            if (keybuf_get(&k) == 0) {
+                r->r[0] = k.key_num;
+                r->r[1] = k.driver_id;
+                r->r[2] = k.state;
+                if (pollword.key_count > 0)
+                    pollword.key_count--;
+
+                if (pollword.key_count == 0 && pollword.midi_count == 0)
+                    pollword.nonzero = 0;
+            }
+            else {
+                r->r[0] = -1;
+                r->r[1] = 0;
+                r->r[2] = 0;
+            }
+
         break;
-        case 2: // MIDIEvent_GetKeypress &5A4C2
-            r->r[0] = key.key_num;
-            r->r[1] = key.driver_id;
-            r->r[2] = key.state;
-        break;
-        case 3: // MIDIEvent_GetMIDIEvent &5A4C3
+        case 2: // MIDIEvent_GetMIDIEvent &5A4C2
             r->r[0] = midi.event;
+            pollword.midi_count = 0;
+
+            if (pollword.key_count == 0)
+                pollword.nonzero = 0;
+        break;
+        case 3: // MIDIEvent_GetKeyDebug &5A4C3
+            r->r[0] = keybuf_write;
+            r->r[1] = keybuf_read;
+        break;
         default:
             return ErrorBadSWI;
         break;
@@ -135,14 +171,17 @@ int event_handler(_kernel_swi_regs *r, void *pw)
 {
   IGNORE(pw);
   IGNORE(r);
-  KeyEventData k;
   switch (r->r[0]) {
       case 11: // Key event
-        /* Store key info from regs to be sent on request */
-        key.state = r->r[1];
-        key.key_num = r->r[2];
-        key.driver_id = r->r[3];
-        pollword = 1;
+        /* If able to add to buffer, increment key_count, restoring pollword pointer
+           if needed */
+        // key state is in R1, key num is in R2, driver ID is in R3.
+        if (keybuf_put(r->r[2],r->r[3],r->r[1]) == 0) {
+            if (pollword.nonzero == 0)
+                pollword.nonzero = 1;
+
+            pollword.key_count++;
+        }
       break;
       case 17: // MIDI event
         /* Here are the relevant events that can happen here:
@@ -152,10 +191,45 @@ int event_handler(_kernel_swi_regs *r, void *pw)
          * 11: MIDI Device Disconnect
          */
         midi.event = r->r[1];
-        pollword = 2;
+        if (pollword.nonzero == 0)
+            pollword.nonzero = 1;
+        pollword.midi_count = 1;
       break;
       default:
       break;
   }
   return 1;
+}
+
+// buffer stuff
+
+int keybuf_put(int key_num, int driver_id, int state)
+{
+    if ((keybuf_write + 1) % BUFSIZE == keybuf_read)
+        return 1; // buffer full
+
+    keybuf[keybuf_write].key_num = key_num;
+    keybuf[keybuf_write].driver_id = driver_id;
+    keybuf[keybuf_write].state = state;
+
+    if (keybuf_write == BUFSIZE-1)
+        keybuf_write = 0;
+    else
+        keybuf_write++;
+
+    return 0;
+}
+
+int keybuf_get(KeyEvent *k)
+{
+    if (keybuf_read == keybuf_write)
+        return 1; // buffer empty
+
+    k->key_num = keybuf[keybuf_read].key_num;
+    k->driver_id = keybuf[keybuf_read].key_num;
+    k->state = keybuf[keybuf_read].state;
+
+    keybuf_read = (keybuf_read + 1) % BUFSIZE;
+
+    return 0;
 }

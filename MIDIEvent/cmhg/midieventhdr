@@ -1,6 +1,6 @@
 ; allocated block: &5A4C0-&5A4FF
 title-string:	MIDIEvent
-help-string:	MIDIEvent 0.991 © Lauren Rad
+help-string:	MIDIEvent 1.00 © Lauren Rad
 date-string: 27 Apr 2023
 
 event-handler: event_entry/event_handler 11 17

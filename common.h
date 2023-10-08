@@ -36,9 +36,8 @@ extern int device_num;
 
 /* SWIs for helper module */
 #define MIDIEvent_GetPollWord   0x5A4C0
-#define MIDIEvent_ClearPollWord 0x5A4C1
-#define MIDIEvent_GetKeypress   0x5A4C2
-#define MIDIEvent_GetMIDIEvent  0x5A4C3
+#define MIDIEvent_GetKeypress   0x5A4C1
+#define MIDIEvent_GetMIDIEvent  0x5A4C2
 
 /* Other helper module constants */
 #define MIDIEvent_KeyEvent      1

@@ -60,6 +60,19 @@ int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, vo
 void load_messages_monitorwin(void);
 
 /*
+ * These structs correspond to the data coming from the MIDIEvent helper module.
+ */
+typedef struct MIDIEventData {
+    int event;
+} MIDIEventData;
+
+typedef struct PollWordData {
+    int nonzero;
+    int key_count;
+    int midi_count;
+} PollWordData;
+
+/*
  * window_monitor_onshow
  * This handler is called when the Monitor window is shown.
  * Performs first-time setup including storing the ObjectId, loading messages,
@@ -97,25 +110,58 @@ int clear_scrolllist(int event_code, ToolboxEvent *event, IdBlock *id_block, voi
  * midi_incoming
  * Handle incoming MIDI notifications from the helper module.
  */
+#define MIDI_DataReceived   0
+#define MIDI_Error          1
+#define MIDI_Connect        10
+#define MIDI_Disconnect     11
+#define MIDI_Initialised    20
+#define MIDI_Dying          21
 int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
 {
     WimpPollWordNonZeroEvent *e = (WimpPollWordNonZeroEvent *)event;
-    int pword = e->poll_word_contents;
+    PollWordData *pword = (PollWordData *)(e->poll_word);
     char printbuf[MaxLine];
     int command;
+    int midi_event;
 
-    if (pword == MIDIEvent_MIDIEvent) {
-        _swi(MIDIEvent_ClearPollWord, _IN(0), 0); // reset pollword
-        // bits 24-25 are number of bytes in the command
-        while (((command = read_rx_command(device_num)) >> 24 & 3) != 0) {
-            parse_command(command, printbuf, MaxLine);
-            scrolllist_add_item(ScrollList_AddItem_MakeVisible, window_id_main,
-                                Gadget_Monitor_ScrollList, printbuf, NULL, NULL, -1);
+    if (pword->midi_count > 0) {
+        _swi(MIDIEvent_GetMIDIEvent,_OUT(0),&midi_event);
+#ifdef REPORTER_DEBUG
+        report_printf("MidiMon: Received MIDI event %d",midi_event);
+#endif
+
+        switch (midi_event) {
+            case MIDI_DataReceived:
+            while (((command = read_rx_command(device_num)) >> 24 & 3) != 0) {
+                parse_command(command, printbuf, MaxLine);
+                scrolllist_add_item(ScrollList_AddItem_MakeVisible, window_id_main,
+                                    Gadget_Monitor_ScrollList, printbuf, NULL, NULL, -1);
+            }
+            break;
+            /* The rest of these aren't fully implemented yet. */
+            case MIDI_Error:
+            report_printf("MidiMon: A MIDI error has occurred");
+            break;
+            case MIDI_Connect:
+            report_printf("MidiMon: A MIDI device has been connected");
+            break;
+            case MIDI_Disconnect:
+            report_printf("MidiMon: A MIDI device has been disconnected");
+            break;
+            case MIDI_Initialised:
+            report_printf("MidiMon: MIDI Module has been initialised");
+            break;
+            case MIDI_Dying:
+            report_printf("MidiMon: MIDI Module is dying");
+            break;
+            default:
+            report_printf("MidiMon: Unknown event received from MIDIEvent: %d",midi_event);
+            break;
         }
         return 1;
     }
 
-    return 0; // if this wasn't a midi event, return 0 by default to pass it along
+    return 0; // if there was no MIDI event, see if there are any KeyEvents
 }
 
 /*
@@ -258,7 +304,12 @@ int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, vo
                         -1);
 
     //return 1;
-    exit(EXIT_FAILURE);
+    clear_rx_buf(0);
+    clear_rx_buf(1);
+    clear_rx_buf(2);
+    clear_rx_buf(3);
+
+    return 1;
 }
 
 /*

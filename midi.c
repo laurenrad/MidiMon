@@ -35,6 +35,8 @@
 #include "preporter.h"
 #include "monitorwin.h"
 
+#define RX_BUFSIZE 2048 // receive buffer size; should be same for both modules so far
+
 /*
  * device_count
  * Returns the number of MIDI devices detected.
@@ -92,21 +94,35 @@ int clear_rx_buf(int device)
      * require 0.08.
      * Note that for this SWI, devices are numbered from 0 (0-3) rather than 1
      */
+
     _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), (device - 1) << 1, &buf_free);
     buf_last_free = buf_free;
 #ifdef REPORTER_DEBUG
-    report_printf("MidiMon: clear_rx_buf: device %d buffer free %d", device, buf_free);
+    report_printf("MidiMon: clear_rx_buf: before: device %d buffer free %d", device, buf_free);
 #endif
-
-    while (buf_free < 2048) {
-        _swi(MIDI_RxCommand, _IN(0) | _OUT(0), device, &command);
+    /*
+    int i = 0;
+    while (buf_free < RX_BUFSIZE) {
+        //_swi(MIDI_RxCommand, _IN(0) | _OUT(0), device, &command);
+        _swi(MIDI_RxByte, _IN(0) | _OUT(0), device, &command);
         _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), (device - 1) << 1, &buf_free);
+        i++;
 
         if (buf_free == buf_last_free) {
             report_printf("MidiMon: err: can't empty buffer!");
-            return -1;          // quit if the buffer isn't clearing to prevent hanging
+            break; //return -1;          // quit if the buffer isn't clearing to prevent hanging
         }
     }
+    report_printf("ran through loop %d times trying to empty buffer",i);
+    */
+    _swi(MIDI_Init, _IN(0), 2);
+
+
+    _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), (device - 1) << 1, &buf_free);
+    buf_last_free = buf_free;
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: clear_rx_buf: after: device %d buffer free %d", device, buf_free);
+#endif
 
     return 0;
 }
@@ -118,8 +134,9 @@ int clear_rx_buf(int device)
  */
 int read_rx_command(int device)
 {
+    report_printf("read_rx_command: device is %d",device);
     int command;
-    _swi(MIDI_RxCommand, _IN(0) | _OUT(0), 0, &command);
+    _swi(MIDI_RxCommand, _IN(0) | _OUT(0), -1, &command);
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: received new command: %x", command);
 #endif

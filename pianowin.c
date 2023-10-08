@@ -40,13 +40,19 @@
 #include "midi.h"
 
 /*
- * These structs correspond to the data coming from the KeyEvent helper module.
+ * These structs correspond to the data coming from the MIDIEvent helper module.
  */
 typedef struct KeyEventData {
     char key_num;               // see PRM 1-158
     int driver_id;
     int state;                  // 0 = up, 1 = down
 } KeyEventData;
+
+typedef struct PollWordData {
+    int nonzero;
+    int key_count;
+    int midi_count;
+} PollWordData;
 
 #define KEY_COUNT   24
 #define BASE_NOTE   60          // Note number of the lowest C on the piano
@@ -188,16 +194,22 @@ int slider_snap(int event_code, WimpPollBlock *event, IdBlock *id_block, void *h
 int key_pressed(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
 {
     WimpPollWordNonZeroEvent *e = (WimpPollWordNonZeroEvent *)event;
-    int pword = e->poll_word_contents;
+    PollWordData *pword = (PollWordData *)(e->poll_word);
     ComponentId component = 0;
     int note = 0;
     int octave = get_octave();
     int velocity = get_velocity();
     int key_num, state;
 
-    if (pword == MIDIEvent_KeyEvent) {
-        _swi(MIDIEvent_GetKeypress,_OUT(0)|_OUT(2),&key_num,&state);
-        _swi(MIDIEvent_ClearPollWord, _IN(0), 0); // reset pollword
+    if (pword->key_count > 0) {
+        _swix(MIDIEvent_GetKeypress,_OUT(0)|_OUT(2),&key_num,&state);
+
+        if (key_num == -1) {
+            report_printf("Couldn't get keypress!");
+            return 1;
+        }
+
+        report_printf("Got keypress: %d (%d)",key_num, state);
 
         if (piano_opened == false) {
             return 1;  // only do something if the window has been opened yet
@@ -339,7 +351,10 @@ int key_pressed(int event_code, WimpPollBlock *event, IdBlock *id_block, void *h
         return 1;
     }
 
-    return 0; // if this wasn't a key event, pass it along
+    /* If there was no key event, see if there are any MIDI events.
+       In practice, this shouldn't happen as midi_incoming was registered after
+       and has higher priority, but it's best practice to leave it here */
+    return 0;
 }
 
 /*
