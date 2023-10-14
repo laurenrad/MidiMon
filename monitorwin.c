@@ -50,6 +50,7 @@
 #define Gadget_Monitor_DeviceLabel	0x05
 #define MenuEntry_Monitor_Save		0x02
 #define MenuEntry_Monitor_Selection	0x05
+#define MenuEntry_Monitor_Test          0x04
 
 static ObjectId window_id_main; // Toolbox Object ID of monitor window
 static bool monitor_opened = false;     // Track if the window has been opened yet
@@ -57,6 +58,7 @@ static bool monitor_opened = false;     // Track if the window has been opened y
 int clear_scrolllist(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int menu_setup(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 void load_messages_monitorwin(void);
 
 /*
@@ -77,8 +79,22 @@ int window_monitor_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block
         event_register_toolbox_handler(-1, Event_Monitor_ClearLog, clear_scrolllist, NULL);
         event_register_toolbox_handler(-1, Event_Monitor_Test, test_button_click, NULL);
         event_register_toolbox_handler(-1, SaveAs_SaveToFile, save_log_text, NULL);
+        event_register_toolbox_handler(-1, Event_Monitor_ShowMenu, menu_setup, NULL);
     }
 
+    return 1;
+}
+
+/*
+ * menu_setup
+ * Perform any needed setup for the monitor window menu.
+ * Currently this removes the "Test" menu entry if built without REPORTER_DEBUG.
+ */
+int menu_setup(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+#ifndef REPORTER_DEBUG
+    menu_remove_entry(0, id_block->self_id, MenuEntry_Monitor_Test);
+#endif
     return 1;
 }
 
@@ -120,8 +136,6 @@ int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *
     char *filename = e->filename;
     FILE *outfile;
     _kernel_oserror *err;
-
-    report_printf("parent was %d", id_block->parent_component);
 
     /*
      * First, when estimating size check if we are doing the whole thing or
@@ -243,11 +257,6 @@ int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, vo
     scrolllist_add_item(0, window_id_main, Gadget_Monitor_ScrollList, asctime(local), NULL, NULL,
                         -1);
 
-    //return 1;
-    //clear_rx_buf(0);
-    //clear_rx_buf(1);
-    //clear_rx_buf(2);
-    //clear_rx_buf(3);
     int buf1, buf2, buf3, buf4;
     _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), 0 << 1, &buf1);
     _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), 1 << 1, &buf2);

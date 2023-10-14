@@ -152,9 +152,6 @@ int main(void)
      */
      int pollword;
     _swi(MIDIEvent_GetPollWord, _OUT(0), &pollword);
-    report_printf("got pollword address %d\n",pollword);
-
-    //_swi(MIDIEvent_ClearPollWord, _IN(0), 0);
 
     /*
      * Begin poll loop

@@ -15,7 +15,7 @@
 
 /*
  * Application: !Midimon
- * File: monitor.h
+ * File: monitorwin.h
  * Author: Lauren Rad
  * Purpose: Main header for the Monitor window.
  */

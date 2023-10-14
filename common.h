@@ -58,6 +58,7 @@ extern int device_num;
 
 /* Events - Monitor window */
 #define Event_Monitor_ClearLog		0xFB0   // Clear the monitor log
+#define Event_Monitor_ShowMenu          0xFB1   // The menu has been shown
 #define Event_Monitor_Test		0xFBF   // Debug - monitor test button
 
 /* Events - Song Control window */

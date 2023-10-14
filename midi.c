@@ -160,11 +160,10 @@ int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void 
  */
 int read_rx_command(int device)
 {
-    report_printf("read_rx_command: device is %d",device);
     int command;
     _swi(MIDI_RxCommand, _IN(0) | _OUT(0), device, &command);
 #ifdef REPORTER_DEBUG
-    report_printf("MidiMon: received new command: %x", command);
+    report_printf("MidiMon: received new command on device %d: %x",device, command);
 #endif
 
     return command;
