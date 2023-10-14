@@ -57,7 +57,7 @@ int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block, voi
      * Devices are numbered 1-4 here.
      */
     update_device_display();
-    clear_rx_buf(device_num);   // clear device rx buffer
+    clear_rx_buf();   // clear device rx buffer
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Device num set to %d and buffer cleared.", device_num);
 #endif

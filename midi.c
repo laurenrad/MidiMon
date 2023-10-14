@@ -35,8 +35,6 @@
 #include "preporter.h"
 #include "monitorwin.h"
 
-#define RX_BUFSIZE 2048 // receive buffer size; should be same for both modules so far
-
 /*
  * device_count
  * Returns the number of MIDI devices detected.
@@ -59,71 +57,14 @@ int device_count(void)
     return count;
 }
 
-/* Clear the Rx Buffer. Returns 0 on success, or the error number of any
-   _kernel_oserror detected. */
+
 /*
  * clear_rx_buf
- * Clears the Rx Buffer. Returns 0 on success, -1 if buffer couldn't be cleared,
- * or the error number of any _kernel_oserror
- * detected.
+ * New and simplified, this will just force clear all Rx Buffers.
  */
-int clear_rx_buf(int device)
+int clear_rx_buf()
 {
-    int buf_free, error_code, command;
-    int buf_last_free; // last known buffer free space. so we can stop if clearing isn't working.
-    _kernel_oserror *err;
-
-    /*
-     * Since this is called before entering the polling loop, check that
-     * everything is ok. For now, at least checking here should ensure that
-     * the MIDI module is loaded before startup, otherwise a SWI not known
-     * error will be returned here.
-     */
-    err = _swix(MIDI_InqError, _OUT(0), &error_code);
-    if (err != NULL) {
-        return err->errnum;
-    }
-    if (error_code == 'B') {
-        report_printf("MidiMon: Receive buffer full!");
-    }
-
-    /*
-     * Prior to 0.08, USB-MIDI had a bug where MIDI_InqBufferSize returned
-     * the buffer size rather than the number of unused buffer bytes. This
-     * appears to have now been fixed, but if written like this it will
-     * require 0.08.
-     * Note that for this SWI, devices are numbered from 0 (0-3) rather than 1
-     */
-
-    _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), (device - 1) << 1, &buf_free);
-    buf_last_free = buf_free;
-#ifdef REPORTER_DEBUG
-    report_printf("MidiMon: clear_rx_buf: before: device %d buffer free %d", device, buf_free);
-#endif
-    /*
-    int i = 0;
-    while (buf_free < RX_BUFSIZE) {
-        //_swi(MIDI_RxCommand, _IN(0) | _OUT(0), device, &command);
-        _swi(MIDI_RxByte, _IN(0) | _OUT(0), device, &command);
-        _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), (device - 1) << 1, &buf_free);
-        i++;
-
-        if (buf_free == buf_last_free) {
-            report_printf("MidiMon: err: can't empty buffer!");
-            break; //return -1;          // quit if the buffer isn't clearing to prevent hanging
-        }
-    }
-    report_printf("ran through loop %d times trying to empty buffer",i);
-    */
     _swi(MIDI_Init, _IN(0), 2);
-
-
-    _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), (device - 1) << 1, &buf_free);
-    buf_last_free = buf_free;
-#ifdef REPORTER_DEBUG
-    report_printf("MidiMon: clear_rx_buf: after: device %d buffer free %d", device, buf_free);
-#endif
-
     return 0;
 }
 
@@ -136,7 +77,7 @@ int read_rx_command(int device)
 {
     report_printf("read_rx_command: device is %d",device);
     int command;
-    _swi(MIDI_RxCommand, _IN(0) | _OUT(0), -1, &command);
+    _swi(MIDI_RxCommand, _IN(0) | _OUT(0), device, &command);
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: received new command: %x", command);
 #endif
@@ -384,7 +325,7 @@ void reset_midi(void)
  */
 int set_tx_channel(int device, int channel)
 {
-    int new_chan = -1;
+    int new_chan = 0;
     channel = channel + (16 * (device - 1));    // convert channel number to port number based on device
     _swi(MIDI_SetTxChannel, _IN(0) | _OUT(0), channel, &new_chan);
 #ifdef REPORTER_DEBUG
@@ -611,7 +552,7 @@ void parse_command(int command, char *buf, int buf_size)
             snprintf(buf, buf_size, "System Reset");
             break;
         default:
-            snprintf(buf, buf_size, "Unknown command");
+            snprintf(buf, buf_size, "Unknown command: %x",command);
             break;
         }
     }

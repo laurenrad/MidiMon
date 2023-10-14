@@ -130,7 +130,7 @@ int main(void)
             for (int i = 1; i <= device_count; i++) {
                 report_printf("  Device %d: %s", i, get_product_name(i));
             }
-            clear_rx_buf(1);    // clear the rx buffer for the device
+            clear_rx_buf();    // clear rx buffers to ensure events will fire
         }
     }
 

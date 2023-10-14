@@ -24,7 +24,7 @@
 #define MIDIMON_MIDI_H
 
 int device_count(void);          // return number of available MIDI devices
-int clear_rx_buf(int device);    // clear the rx buf
+int clear_rx_buf();    // clear the rx buf
 int read_rx_command(int device); // handle new incoming message
 int tx_noteon(int note, int velocity, int oct_shift);   // send note on
 int tx_noteoff(int note, int velocity, int oct_shift);  // send note off

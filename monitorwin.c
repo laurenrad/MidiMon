@@ -123,6 +123,7 @@ int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void 
     char printbuf[MaxLine];
     int command;
     int midi_event;
+    int buffree = -1;
 
     if (pword->midi_count > 0) {
         _swi(MIDIEvent_GetMIDIEvent,_OUT(0),&midi_event);
@@ -132,11 +133,25 @@ int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void 
 
         switch (midi_event) {
             case MIDI_DataReceived:
-            while (((command = read_rx_command(device_num)) >> 24 & 3) != 0) {
+            /* MidiSupport will tack on the port number to padding as well, so
+               mask it off first before checking */
+            while (((command = read_rx_command(-1) & 0x0FFFFFFF)) != 0) {
                 parse_command(command, printbuf, MaxLine);
                 scrolllist_add_item(ScrollList_AddItem_MakeVisible, window_id_main,
                                     Gadget_Monitor_ScrollList, printbuf, NULL, NULL, -1);
             }
+            /* At this point, we should be done in almost all current cases, BUT
+             * the MidiSupport module will pass through 0 padding.
+             * One solution would be to check buffer size on this end, but
+             * MIDI_InqBufferSize seems to behave inconsistently between modules
+             * and I'm not sure yet of a standard way to get max size.
+             * Note to self: report that MIDI_InqBufferSize off-by-one to Peter when
+             * I get a chance. It's reporting 2044 when clear.
+             * So for now, the cheapest solution seems to be to just force Rx
+             * buffers clear to ensure any future events will fire. Feel free to
+             * revisit decision later.
+             */
+            clear_rx_buf();
             break;
             /* The rest of these aren't fully implemented yet. */
             case MIDI_Error:
@@ -304,10 +319,16 @@ int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, vo
                         -1);
 
     //return 1;
-    clear_rx_buf(0);
-    clear_rx_buf(1);
-    clear_rx_buf(2);
-    clear_rx_buf(3);
+    //clear_rx_buf(0);
+    //clear_rx_buf(1);
+    //clear_rx_buf(2);
+    //clear_rx_buf(3);
+    int buf1, buf2, buf3, buf4;
+    _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), 0 << 1, &buf1);
+    _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), 1 << 1, &buf2);
+    _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), 2 << 1, &buf3);
+    _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), 3 << 1, &buf4);
+    report_printf("Buf sizes: 0=%d 1=%d 2=%d 3=%d",buf1,buf2,buf3,buf4);
 
     return 1;
 }

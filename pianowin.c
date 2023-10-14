@@ -209,8 +209,6 @@ int key_pressed(int event_code, WimpPollBlock *event, IdBlock *id_block, void *h
             return 1;
         }
 
-        report_printf("Got keypress: %d (%d)",key_num, state);
-
         if (piano_opened == false) {
             return 1;  // only do something if the window has been opened yet
         }
