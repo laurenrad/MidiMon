@@ -40,7 +40,7 @@ RMEnsure PrintDbox 0.00 RMLoad System:modules.toolbox.printdbox
 RMEnsure PrintDbox 0.03 Error You need PrintDbox 0.10 or later to run !Midimon
 
 | Misc helper modules
-RMEnsure MidiEvnet 0.99 RMLoad <Midimon$Dir>.MidiEvent
+RMEnsure MidiEvent 1.00 RMLoad <Midimon$Dir>.MidiEvent
 
 Iconsprites <Midimon$Dir>.!Sprites
 wimpslot -min 64K -max 64K
