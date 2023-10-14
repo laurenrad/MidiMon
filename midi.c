@@ -75,7 +75,7 @@ int device_count(void)
  * clear_rx_buf
  * New and simplified, this will just force clear all Rx Buffers.
  */
-int clear_rx_buf()
+int clear_rx_buf(void)
 {
     _swi(MIDI_Init, _IN(0), 2);
     return 0;
@@ -110,7 +110,7 @@ int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void 
             case MIDI_DataReceived:
             /* MidiSupport will tack on the port number to padding as well, so
                mask it off first before checking */
-            while (((command = read_rx_command(-1) & 0x0FFFFFFF)) != 0) {
+            while (((command = read_rx_command(-1)) & 0x0FFFFFFF) != 0) {
                 parse_command(command, printbuf, MaxLine);
                 add_to_monitor(printbuf);
             }
@@ -545,101 +545,113 @@ void parse_command(int command, char *buf, int buf_size)
     unsigned int size = ((unsigned int)command >> 24) & 3;     // bits 24-25 are size of command
     unsigned int data1 = ((unsigned int)command >> 8) & 0xFF;  // byte 1: data byte 1
     unsigned int data2 = ((unsigned int)command >> 16) & 0xFF; // byte 2: data byte 2
+    unsigned int port = ((unsigned int)command >> 28); // bits 28-31 are port number
     int channel;
     static int in_sysex = 0; // are we in the middle of SysEx?
-    int buflen = 0; // track used buffer length
+    int bufpos = 0; // track used buffer length
 
 #ifdef REPORTER_DEBUG
-    report_printf("parsing command. in_sysex=%d status=%x size=%x data1=%x data2=%x", in_sysex, status, size, data1, data2);
+    report_printf("parsing command. in_sysex=%d status=%x size=%x data1=%x data2=%x port=%d", in_sysex, status, size, data1, data2, port);
 #endif
     if (in_sysex) { // handle sysex bytes until done
-        buflen += snprintf(buf, buf_size, "[System Exclusive] ");
+        bufpos += snprintf(buf, buf_size, "[%d:  System Exclusive]",port);
+        if (bufpos > buf_size-1)
+            return; //buffer full, truncate
         for (int i = 0; i < size; i++) {
             status = command &0xFF;
             if (status == 0xF7) {
                 in_sysex = 0;
-                snprintf(buf+(sizeof(char)*buflen),
-                        buf_size, " [System Exclusive End]");
+                snprintf(buf+(sizeof(char)*bufpos),
+                        buf_size, " [%d:  System Exclusive End]",port);
                 break;
             }
 
-            buflen += snprintf(buf+(sizeof(char)*buflen),
+            bufpos += snprintf(buf+(sizeof(char)*bufpos),
                                 buf_size, "0x%2x",status);
+            if (bufpos > buf_size-1)
+                return;
             command >>= 8;
         }
     }
     else if (status >= 0x80 && status <= 0xEF) {     // channel-specific
         channel = status & 0x0F;        // lower nibble is channel
         status = status & 0xF0; // higher nibble command
+        bufpos += snprintf(buf,buf_size,"[%d:%2d:",port,channel+1); // add port and channel
+        if (bufpos > buf_size-1)
+            return;
+        buf += sizeof(char)*bufpos;
         switch (status) {
         case 0x80:             // Note Off
-            snprintf(buf, buf_size, "[Note Off] Note=%d Velocity=%d", data1, data2);
+            snprintf(buf, buf_size, "Note Off] Note=%d Velocity=%d", data1, data2);
             break;
         case 0x90:             // Note On
-            snprintf(buf, buf_size, "[Note On] Note=%d Velocity=%d", data1, data2);
+            snprintf(buf, buf_size, "Note On] Note=%d Velocity=%d", data1, data2);
             break;
         case 0xA0:             // Aftertouch / Key Pressure
-            snprintf(buf, buf_size, "[Aftertouch] Key=%d Pressure=%d", data1, data2);
+            snprintf(buf, buf_size, "Aftertouch] Key=%d Pressure=%d", data1, data2);
             break;
         case 0xB0:             // Controller Change
-            snprintf(buf, buf_size, "[Controller Change] Controller=%d Value=%d", data1, data2);
+            snprintf(buf, buf_size, "Controller Change] Controller=%d Value=%d", data1, data2);
             break;
         case 0xC0:             // Program Change
-            snprintf(buf, buf_size, "[Program Change] Program=%d", data1);
+            snprintf(buf, buf_size, "Program Change] Program=%d", data1);
             break;
         case 0xD0:             // Channel Pressure
-            snprintf(buf, buf_size, "[Channel Pressure] Pressure=%d", data1);
+            snprintf(buf, buf_size, "Channel Pressure] Pressure=%d", data1);
             break;
         case 0xE0:             // Pitch Bend
-            snprintf(buf, buf_size, "[Pitch Bend] LSB=0x%2x MSB=0x%2x", data1, data2);
+            snprintf(buf, buf_size, "Pitch Bend] LSB=0x%2x MSB=0x%2x", data1, data2);
             break;
         default:
-            snprintf(buf, buf_size, "Unknown command");
+            snprintf(buf, buf_size, "Unknown command]");
             break;
         }
     } else {                    // Not channel-specific
+        bufpos += snprintf(buf,buf_size,"[%d:  ",port); // add port
+        if (bufpos > buf_size-1)
+            return;
+        buf += sizeof(char)*bufpos;
         switch (status) {
         case 0xF0:             // System Exclusive. Not fully implemented but at least reports that there was one
-            snprintf(buf, buf_size, "[System Exclusive] 0x%2x 0x%2x", data1, data2);
+            snprintf(buf, buf_size, "System Exclusive] 0x%2x 0x%2x", data1, data2);
             in_sysex = 1;
             break;
         case 0xF1:             // MTC Quarter Frame
-            snprintf(buf, buf_size, "MTC Quarter Frame: 0x%2x %2x", data1, data2);
+            snprintf(buf, buf_size, "MTC Quarter Frame] 0x%2x %2x", data1, data2);
             break;
         case 0xF2:             // Song Position Pointer
-            snprintf(buf, buf_size, "[Song Position] LSB=0x%2x MSB=0x%2x", data1, data2);
+            snprintf(buf, buf_size, "Song Position] LSB=0x%2x MSB=0x%2x", data1, data2);
             break;
         case 0xF3:             // Song Select
-            snprintf(buf, buf_size, "[Song Select] Song=%d", data1);
+            snprintf(buf, buf_size, "Song Select] Song=%d", data1);
             break;
         case 0xF5:             // Bus Select: nonstandard, vendor-specific. Untested
-            snprintf(buf, buf_size, "[Bus Select] Bus=%d", data1);
+            snprintf(buf, buf_size, "Bus Select] Bus=%d", data1);
             break;
         case 0xF6:             // Tune Request
-            snprintf(buf, buf_size, "[Tune Request]");
+            snprintf(buf, buf_size, "Tune Request]");
             break;
         case 0xF8:             // Clock
-            snprintf(buf, buf_size, "Clock");
+            snprintf(buf, buf_size, "Clock]");
             break;
         case 0xFA:             // Start
-            snprintf(buf, buf_size, "Start");
+            snprintf(buf, buf_size, "Start]");
             break;
         case 0xFB:             // Continue
-            snprintf(buf, buf_size, "Continue");
+            snprintf(buf, buf_size, "Continue]");
             break;
         case 0xFC:             // Stop
-            snprintf(buf, buf_size, "Stop");
+            snprintf(buf, buf_size, "Stop]");
             break;
         case 0xFE:             // Active Sensing
-            snprintf(buf, buf_size, "Active Sensing");
+            snprintf(buf, buf_size, "Active Sensing]");
             break;
         case 0xFF:             // System Reset
-            snprintf(buf, buf_size, "System Reset");
+            snprintf(buf, buf_size, "System Reset]");
             break;
         default:
-            snprintf(buf, buf_size, "Unknown command: %x",command);
+            snprintf(buf, buf_size, "Unknown command: %x]",command);
             break;
         }
     }
-
 }
