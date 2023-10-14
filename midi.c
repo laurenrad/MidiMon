@@ -36,6 +36,19 @@
 #include "monitorwin.h"
 
 /*
+ * These structs correspond to the data coming from the MIDIEvent helper module.
+ */
+typedef struct MIDIEventData {
+    int event;
+} MIDIEventData;
+
+typedef struct PollWordData {
+    int nonzero;
+    int key_count;
+    int midi_count;
+} PollWordData;
+
+/*
  * device_count
  * Returns the number of MIDI devices detected.
  */
@@ -66,6 +79,78 @@ int clear_rx_buf()
 {
     _swi(MIDI_Init, _IN(0), 2);
     return 0;
+}
+
+/*
+ * midi_incoming
+ * Handle incoming MIDI notifications from the helper module.
+ */
+#define MIDI_DataReceived   0
+#define MIDI_Error          1
+#define MIDI_Connect        10
+#define MIDI_Disconnect     11
+#define MIDI_Initialised    20
+#define MIDI_Dying          21
+int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
+{
+    WimpPollWordNonZeroEvent *e = (WimpPollWordNonZeroEvent *)event;
+    PollWordData *pword = (PollWordData *)(e->poll_word);
+    char printbuf[MaxLine];
+    int command;
+    int midi_event;
+    int buffree = -1;
+
+    if (pword->midi_count > 0) {
+        _swi(MIDIEvent_GetMIDIEvent,_OUT(0),&midi_event);
+#ifdef REPORTER_DEBUG
+        report_printf("MidiMon: Received MIDI event %d",midi_event);
+#endif
+
+        switch (midi_event) {
+            case MIDI_DataReceived:
+            /* MidiSupport will tack on the port number to padding as well, so
+               mask it off first before checking */
+            while (((command = read_rx_command(-1) & 0x0FFFFFFF)) != 0) {
+                parse_command(command, printbuf, MaxLine);
+                add_to_monitor(printbuf);
+            }
+            /* At this point, we should be done in almost all current cases, BUT
+             * the MidiSupport module will pass through 0 padding.
+             * One solution would be to check buffer size on this end, but
+             * MIDI_InqBufferSize seems to behave inconsistently between modules
+             * and I'm not sure yet of a standard way to get max size.
+             * Note to self: report that MIDI_InqBufferSize off-by-one to Peter when
+             * I get a chance. It's reporting 2044 when clear.
+             * So for now, the cheapest solution seems to be to just force Rx
+             * buffers clear to ensure any future events will fire. Feel free to
+             * revisit decision later.
+             */
+            clear_rx_buf();
+            break;
+            /* The rest of these aren't fully implemented yet. */
+            case MIDI_Error:
+            report_printf("MidiMon: A MIDI error has occurred");
+            break;
+            case MIDI_Connect:
+            report_printf("MidiMon: A MIDI device has been connected");
+            break;
+            case MIDI_Disconnect:
+            report_printf("MidiMon: A MIDI device has been disconnected");
+            break;
+            case MIDI_Initialised:
+            report_printf("MidiMon: MIDI Module has been initialised");
+            break;
+            case MIDI_Dying:
+            report_printf("MidiMon: MIDI Module is dying");
+            break;
+            default:
+            report_printf("MidiMon: Unknown event received from MIDIEvent: %d",midi_event);
+            break;
+        }
+        return 1;
+    }
+
+    return 0; // if there was no MIDI event, see if there are any KeyEvents
 }
 
 /*

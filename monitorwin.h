@@ -24,7 +24,7 @@
 #define MIDIMON_MONITOR_H
 
 int window_monitor_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
+void add_to_monitor(char *buf);
 void update_device_display(void);
 
 #endif
