@@ -57,7 +57,7 @@ Piano|51:Type Notes
 Piano|53:Velocity
 Piano|54:Use this control to set the velocity value of notes.
 Piano|55:Use this control to shift the piano keys up or down a number of octaves.
-Piano|57:Oct Shift
+Piano|57:Oct. Shift
 
 # Messages for object CtrllrMenu (class Menu)
 
