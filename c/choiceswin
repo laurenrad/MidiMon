@@ -48,6 +48,7 @@
 #define Gadget_Choices_SaveButton	0x06    // save action button
 #define Gadget_Choices_CancelButton	0x07    // cancel action button
 #define Gadget_Choices_SetButton	0x08    // set action button
+#define Gadget_Choices_UseHWDelay       0x09    // use hardware delay option button
 
 static ObjectId window_id_choices; // stored ObjectId of this window
 static bool choices_opened = false; // track whether the ID is known
@@ -152,6 +153,7 @@ void refresh_gadgets(Choices c, IdBlock *id_block)
     optionbutton_set_state(0, id_block->self_id, Gadget_Choices_AltNoteOff, c.opt_altnoteoff);
     optionbutton_set_state(0, id_block->self_id, Gadget_Choices_IgnoreClock, c.opt_ignoreclock);
     optionbutton_set_state(0, id_block->self_id, Gadget_Choices_FakeFastClock, c.opt_fakefastclock);
+    optionbutton_set_state(0, id_block->self_id, Gadget_Choices_UseHWDelay, c.opt_usehwdelay);
 }
 
 /*
@@ -165,6 +167,7 @@ void store_gadgets(Choices *c, IdBlock *id_block)
     optionbutton_get_state(0, id_block->self_id, Gadget_Choices_IgnoreClock, &(c->opt_ignoreclock));
     optionbutton_get_state(0, id_block->self_id, Gadget_Choices_FakeFastClock,
                            &(c->opt_fakefastclock));
+    optionbutton_get_state(0, id_block->self_id, Gadget_Choices_UseHWDelay, &(c->opt_usehwdelay));
 }
 
 /*
@@ -179,6 +182,7 @@ void action_choices(Choices *const c)
     set_tx_channel(device_num, c->opt_txchan);
     ignore_timing(c->opt_ignoreclock);
     fake_fast_clock(c->opt_fakefastclock);
+    set_hw_delay(c->opt_usehwdelay);
 }
 
 /*

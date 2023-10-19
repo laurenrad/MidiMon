@@ -40,6 +40,7 @@ void tx_pitchwheel(int pitch);   // tx pitchwheel command
 void ignore_timing(int option);  // turn timing clock messages on/off
 void reset_midi(void);           // reset the MIDI module status
 int fake_fast_clock(int option); // set fake fast clock option
+int set_hw_delay(int option);    // set hw delay option
 int set_tx_channel(int device, int channel);    // set tx channel
 int midi_error(WimpMessage *message, void *handle);    // handle MIDI error message
 int midi_dying(WimpMessage *message, void *handle);    // handle MIDI dying msg

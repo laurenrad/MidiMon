@@ -366,9 +366,9 @@ void ignore_timing(int option)
     }
 }
 
-/* Set fake fast clock. Pass 0 for FFC off, 1 for on. Returns options bitmap or -1 on error. */
 /*
  * fake_fast_clock
+ * Set fake fast clock. Pass 0 for FFC off, 1 for on. Returns options bitmap or -1 on error.
  * If argument is nonzero, enables fake fast clock in the MIDI module.
  * If argument is zero, disables fake fast clock in the MIDI module.
  * Returns options bitmap or -1 on error.
@@ -386,6 +386,32 @@ int fake_fast_clock(int option)
     _swi(MIDI_Options, _IN(0) | _OUT(0), -1, &bitmap);
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: FFC altered. Options bitmap is %x", bitmap);
+#endif
+
+    return bitmap;
+}
+
+/*
+ * set_hw_delay
+ * Set whether a hardware delay is used. For now, this will just set/unset for
+ * all devices. This may be expanded in future versions.
+ * If argument is nonzero, all devices will have hw delay set.
+ * If argument is zero, all devices will not have hw delay set.
+ * Returns delay bitmap.
+ */
+int set_hw_delay(int option)
+{
+    int bitmap = -1;
+
+    if (option == 0) {
+        _swi(MIDI_Options, _IN(1), 0x0F);
+    } else {
+        _swi(MIDI_Options, _IN(1), 0x00);
+    }
+
+    _swi(MIDI_Options, _IN(1) | _OUT(1), -1, &bitmap);
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: HW Delay altered. Options bitmap is %x", bitmap);
 #endif
 
     return bitmap;

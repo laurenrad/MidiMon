@@ -41,7 +41,7 @@ Choices init_choices(void)
     c.opt_altnoteoff = DEFAULTS_OPT_ALTNOTEOFF;
     c.opt_ignoreclock = DEFAULTS_OPT_IGNORECLOCK;
     c.opt_fakefastclock = DEFAULTS_OPT_FAKEFASTCLOCK;
-
+    c.opt_usehwdelay = DEFAULTS_OPT_USEHWDELAY;
     return c;
 }
 
