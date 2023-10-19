@@ -2,7 +2,7 @@
 
 COMPONENT	= MidiMon
 TARGET 		= !RunImage
-OBJS 		= main preporter choices midi choiceswin messageswin pianowin songwin monitorwin ibar
+OBJS 		= main preporter choices midi choiceswin messageswin pianowin songwin monitorwin ibar infowin
 CINCLUDES 	= -Itbox:,C:,risc_oslib:
 LIBS		= ${EVENTLIB} ${TBOXLIB} ${WIMPLIB} ${RLIB}
 INSTDIR		?= <Install$Dir>

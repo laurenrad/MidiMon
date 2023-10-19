@@ -28,6 +28,7 @@
 #include "toolbox.h"
 #include "saveas.h"
 #include "iconbar.h"
+#include "proginfo.h"
 #include "event.h"
 #include "menu.h"
 #include "wimplib.h"
@@ -47,6 +48,7 @@
 #include "messageswin.h"
 #include "songwin.h"
 #include "ibar.h"
+#include "infowin.h"
 
 #define WimpVersion	310
 struct Choices global_choices;
@@ -238,6 +240,7 @@ void register_handlers(void)
     event_register_toolbox_handler(-1, Event_Windows_ShowPiano, window_piano_onshow, NULL);
     event_register_toolbox_handler(-1, Event_Windows_ShowMessages, window_messages_onshow, NULL);
     event_register_toolbox_handler(-1, Event_Windows_ShowSong, window_song_onshow, NULL);
+    event_register_toolbox_handler(-1, ProgInfo_AboutToBeShown, proginfo_onshow, NULL);
 
     /*
      * Toolbox events - Iconbar
