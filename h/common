@@ -77,7 +77,8 @@ extern int device_num;
 #define Event_Iconbar_ShowDevMenu	0xFE0   // Iconbar menu: show devices menu
 #define Event_Iconbar_DeviceSelect	0xFE1   // Device menu selection
 #define Event_Iconbar_ShowHelp		0xFE2   // Iconbar menu: Help...
-#define Event_Iconbar_Panic		0xFE3   // Reset MIDI module status
+#define Event_Iconbar_ResetMIDI		0xFE3   // Reset MIDI module status
+#define Event_Iconbar_Panic             0xFE4   // Force notes off
 
 /*
  * Messages - allocated and registered with ROOL.

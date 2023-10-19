@@ -430,6 +430,16 @@ void reset_midi(void)
 }
 
 /*
+ * panic_midi(void)
+ * Attempt to force off all notes on the current port and channel.
+ */
+void panic_midi(void)
+{
+    for (int note=0; note<128; note++)
+        tx_noteoff(note,0,0);
+}
+
+/*
  * set_tx_channel
  * Sets the Tx channel by calling SWI MIDI_SetTxChannel. Returns new channel.
  */

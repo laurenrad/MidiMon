@@ -249,6 +249,7 @@ void register_handlers(void)
     event_register_toolbox_handler(-1, Event_Iconbar_DeviceSelect, device_selection, NULL);
     event_register_toolbox_handler(-1, Event_Iconbar_Panic, midi_panic, NULL);
     event_register_toolbox_handler(-1, Event_Iconbar_ShowDevMenu, update_devices_menu, NULL);
+    event_register_toolbox_handler(-1, Event_Iconbar_ResetMIDI, midi_reset, NULL);
 
     /*
      * Wimp messages

@@ -34,13 +34,6 @@
 #include "choices.h"
 
 /*
- * Everything in this file besides panic currently pertains to multi-device selection, which
- * is disabled in this release as hardware and module issues prevented me from working it out
- * properly. However, I'm leaving the code in, in case some enterprising person with two
- * working MIDI interfaces wants to implement this.
- */
-
-/*
  * device_selection
  * This handler is called when an item in the device menu is selected.
  * It updates the menu and attempts to set the active device.
@@ -106,12 +99,23 @@ int update_devices_menu(int event_code, ToolboxEvent *event, IdBlock *id_block, 
 }
 
 /*
+ * midi_reset
+ * This handler is called when the Reset MIDI menu item in the Iconbar is clicked.
+ * It calls reset_midi to reset the state of the MIDI module.
+ */
+int midi_reset(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+    reset_midi();
+    return 1;
+}
+
+/*
  * midi_panic
  * This handler is called when the Panic menu item in the Iconbar is clicked.
- * It calls reset_midi to reset the state of the MIDI module.
+ * It calls panic_midi to attempt to force all notes off.
  */
 int midi_panic(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-    reset_midi();
+    panic_midi();
     return 1;
 }
