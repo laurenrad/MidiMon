@@ -5,7 +5,7 @@ _TaskName:MidiMon
 
 ProgInfo|1:MIDI Monitor
 ProgInfo|2:© Lauren Rad 2023
-ProgInfo|3:0.04 (12-Apr-2023)
+ProgInfo|3:1.1-pre (18-Oct-2023)
 ProgInfo|4:https://github.com/laurenrad
 
 # Messages for object Iconbar (class Iconbar)

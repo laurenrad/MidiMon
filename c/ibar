@@ -43,7 +43,7 @@
 /*
  * device_selection
  * This handler is called when an item in the device menu is selected.
- * It both updates the menu and attempts to set the active device.
+ * It updates the menu and attempts to set the active device.
  */
 int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
@@ -52,11 +52,6 @@ int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block, voi
         menu_set_tick(0, id_block->self_id, i, 0);      // first, untick all menu items
     }
     menu_set_tick(0, id_block->self_id, device_num, 1); // then tick the selected menu item
-    /*
-     * Tell the monitor window to update its device display, if it's been opened.
-     * Devices are numbered 1-4 here.
-     */
-    update_device_display();
     clear_rx_buf();   // clear device rx buffer
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Device num set to %d and buffer cleared.", device_num);

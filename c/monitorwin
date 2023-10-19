@@ -75,7 +75,6 @@ int window_monitor_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block
         load_messages_monitorwin();
         // Invert ScrollList colours
         scrolllist_set_colour(0, window_id_main, Gadget_Monitor_ScrollList, -256, 0);
-        update_device_display();
         event_register_toolbox_handler(-1, Event_Monitor_ClearLog, clear_scrolllist, NULL);
         event_register_toolbox_handler(-1, Event_Monitor_Test, test_button_click, NULL);
         event_register_toolbox_handler(-1, SaveAs_SaveToFile, save_log_text, NULL);
@@ -208,40 +207,6 @@ int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *
     }
 
     return 1;
-}
-
-/*
- * update_device_display
- * Updates the device name display.
- * This can be called from elsewhere before the window is opened, so only
- * do this if the window's object ID is known.
- */
-void update_device_display(void)
-{
-    _kernel_oserror *err = NULL;
-
-    if (monitor_opened) {
-        if (device_num != -1) {
-            char *prod_name = get_product_name(device_num + 1); /* device number is 1-4 here */
-            char display_name[ProdNameMaxLen];
-            if (prod_name != NULL) {
-                snprintf(display_name, ProdNameMaxLen, "%s", prod_name);
-                err =
-                    displayfield_set_value(0, window_id_main, Gadget_Monitor_DeviceDisplay,
-                                           prod_name);
-            } else {
-                report_printf("MidiMon: Unknown error getting product name");
-            }
-        } else {
-            /* Load in localised "No Device" message. */
-            err = displayfield_set_value(0, window_id_main, Gadget_Monitor_DeviceDisplay,
-                                         msgs_lookup("Monitor|6:No device selected"));
-        }
-
-        if (err != NULL) {
-            report_printf("MidiMon: err updating device display: %d %s", err->errnum, err->errmess);
-        }
-    }
 }
 
 /*

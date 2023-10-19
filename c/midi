@@ -529,13 +529,12 @@ int midi_dev_connected(WimpMessage *message, void *handle)
  * midi_dev_disconnected
  * Handles a MIDI device disconnected message from the MIDIEvent module.
  * As there's no way of necessarily knowing which device was disconnected and they may be
- * renumbered, this will just set no device and then update the device display.
+ * renumbered, this will just set no device.
  */
 int midi_dev_disconnected(WimpMessage *message, void *handle)
 {
     report_printf("MidiMon: A MIDI device has been disconnected");
     device_num = -1;            // flag no selected device
-    update_device_display();
     return 1;
 }
 
