@@ -14,7 +14,7 @@ me know how this works, keeping in mind the hardware support may vary by module.
 [^1]: This module can currently be obtained from [Rick Murray's
 website](https://heyrick.eu/blog/index.php?diary=20230319).
 
-[^2]: This module can currently be obtained from [Pete's website](www.forever.onmypc.net).
+[^2]: This module can currently be obtained from [Pete's website](http://www.forever.onmypc.net).
 
 ## Latest Release
 
