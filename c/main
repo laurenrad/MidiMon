@@ -256,10 +256,6 @@ void register_handlers(void)
      */
     event_register_message_handler(Wimp_MQuit, quit_message, 0);
     event_register_message_handler(Wimp_MPreQuit, quit_message, 0);
-    event_register_message_handler(Message_MIDIError, midi_error, 0);
-    event_register_message_handler(Message_MIDIDying, midi_dying, 0);
-    event_register_message_handler(Message_MIDIDevConnect, midi_dev_connected, 0);
-    event_register_message_handler(Message_MIDIDevDisconnect, midi_dev_disconnected, 0);
 
     /*
      * Wimp event handlers

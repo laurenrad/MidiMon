@@ -52,6 +52,8 @@ typedef struct PollWordData {
 
 char strbuf[MaxLine];
 
+void report_midi_error(void);
+
 /*
  * device_count
  * Returns the number of MIDI devices detected.
@@ -93,6 +95,8 @@ int clear_rx_buf(void)
 #define MIDI_Error          1
 #define MIDI_Connect        10
 #define MIDI_Disconnect     11
+#define MIDI_Start          12 // not documented, not implementing here
+#define MIDI_Stop           13 // not documented, not implementing here
 #define MIDI_Initialised    20
 #define MIDI_Dying          21
 int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
@@ -141,6 +145,7 @@ int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void 
             case MIDI_Error:
             report_printf("MidiMon: A MIDI error has occurred");
             add_to_monitor(msgs_lookup("MIDIEvents|Error:A MIDI error has occurred."));
+            report_midi_error(); // give error details
             break;
             case MIDI_Connect:
             report_printf("MidiMon: A MIDI device has been connected");
@@ -149,6 +154,7 @@ int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void 
             case MIDI_Disconnect:
             report_printf("MidiMon: A MIDI device has been disconnected");
             add_to_monitor(msgs_lookup("MIDIEvents|Disconnect:A device has been disconnected."));
+            device_num = -1; // flag no selected device
             break;
             case MIDI_Initialised:
             report_printf("MidiMon: MIDI Module has been initialised");
@@ -157,6 +163,8 @@ int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void 
             case MIDI_Dying:
             report_printf("MidiMon: MIDI Module is dying");
             add_to_monitor(msgs_lookup("MIDIEvents|Dying:MIDI module is dying."));
+            // if this happens, quit
+            // werr(1, "The MIDI module is no longer running. MidiMon will now exit.");
             break;
             default:
             report_printf("MidiMon: Unknown event received from MIDIEvent: %d",midi_event);
@@ -202,6 +210,10 @@ int tx_noteon(int note, int velocity, int oct_shift)
     report_printf("MidiMon: Note on tx: %d", note);
 #endif
 
+    snprintf(strbuf,MaxLine,"OUT [%d:%2d:Note On] Note=%d Velocity=%d",device_num,
+             global_choices.opt_txchan,note,velocity);
+    add_to_monitor(strbuf); // report in monitor
+
     err = _swix(MIDI_SetTxChannel, _IN(0), global_choices.opt_txchan);
     err = _swix(MIDI_TxNoteOn, _INR(0, 1) | _OUT(1), note, velocity, &status);
 
@@ -245,6 +257,9 @@ int tx_noteoff(int note, int velocity, int oct_shift)
     report_printf("MidiMon: Note off tx: note=%d, vel=%d, chan=%d", note, velocity,
                   global_choices.opt_txchan);
 #endif
+    snprintf(strbuf,MaxLine,"OUT [%d:%2d:Note Off] Note=%d Velocity=%d",device_num,
+             global_choices.opt_txchan,note,velocity);
+    add_to_monitor(strbuf); // report in monitor
 
     return 0;
 }
@@ -260,6 +275,8 @@ void tx_progchg(int prog)
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Prog change tx: prog=%d", prog);
 #endif
+    snprintf(strbuf,MaxLine,"OUT [%d:  :Program Change] Program=%d",device_num,prog);
+    add_to_monitor(strbuf);
 }
 
 /*
@@ -273,7 +290,9 @@ void tx_controlchg(int control, int value)
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Control change tx: control=%d, value=%d", control, value);
 #endif
-
+    snprintf(strbuf,MaxLine,"OUT [%d:  :Controller Change] Controller=%d Value=%d",device_num,
+             control,value);
+    add_to_monitor(strbuf);
 }
 
 /*
@@ -287,6 +306,8 @@ void tx_songstart(void)
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Song start tx");
 #endif
+    snprintf(strbuf,MaxLine,"OUT [%d:  :Song Start]",device_num);
+    add_to_monitor(strbuf);
 }
 
 /*
@@ -300,6 +321,8 @@ void tx_songcontinue(void)
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Song continue tx");
 #endif
+    snprintf(strbuf,MaxLine,"OUT [%d:  :Song Continue]",device_num);
+    add_to_monitor(strbuf);
 }
 
 /*
@@ -312,6 +335,8 @@ void tx_songstop(void)
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Song stop tx");
 #endif
+    snprintf(strbuf,MaxLine,"OUT [%d:  :Song Stop]",device_num);
+    add_to_monitor(strbuf);
 }
 
 /*
@@ -324,6 +349,8 @@ void tx_songsel(int num)
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Song sel tx: song=%d", num);
 #endif
+    snprintf(strbuf,MaxLine,"OUT [%d:  :Song Select] Song=%d",device_num,num);
+    add_to_monitor(strbuf);
 }
 
 /*
@@ -336,6 +363,8 @@ void tx_tunereq(void)
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Tune request tx");
 #endif
+    snprintf(strbuf,MaxLine,"OUT [%d:  :Tune Request]",device_num);
+    add_to_monitor(strbuf);
 }
 
 /*
@@ -348,6 +377,8 @@ void tx_sysreset(void)
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: System reset tx");
 #endif
+    snprintf(strbuf,MaxLine,"OUT [%d:  :System Reset]",device_num);
+    add_to_monitor(strbuf);
 }
 
 /*
@@ -360,6 +391,8 @@ void tx_pitchwheel(int pitch)
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Pitch wheel tx: pitch=%d", pitch);
 #endif
+    snprintf(strbuf,MaxLine,"OUT [%d:  :Pitch Wheel] Pitch=%d",device_num,pitch);
+    add_to_monitor(strbuf);
 }
 
 /*
@@ -472,12 +505,12 @@ int set_tx_channel(int device, int channel)
 }
 
 /*
- * midi_error
+ * report_midi_error
  * Debug function to report MIDI error messages from the MIDIEvent module.
  * This is intended to be called only if REPORTER_DEBUG is on,
  * as many of these errors are common and expected.
  */
-int midi_error(WimpMessage *message, void *handle)
+void report_midi_error(void)
 {
     report_printf("MidiMon: A MIDI error has occurred. Details:");
     int err = 0;
@@ -521,47 +554,6 @@ int midi_error(WimpMessage *message, void *handle)
         }
     }
 
-    return 1;
-}
-
-/*
- * midi_dying
- * Handles MIDI dying messages from the MIDIEvent module.
- * This needs to actually do more, but currently just throws up an error
- * if the module quits while the application is running.
- */
-int midi_dying(WimpMessage *message, void *handle)
-{
-#ifdef REPORTER_DEBUG
-    report_printf("MidiMon: MIDI module is dying");
-#endif
-    werr(1, "The MIDI module is no longer running. MidiMon will now exit.");
-    return 1;
-}
-
-/*
- * midi_dev_connected
- * Handles MIDI device connect messages from the MIDIEvent module.
- * Since only one device is currently supported, this is unused other than
- * printing a message to Reporter.
- */
-int midi_dev_connected(WimpMessage *message, void *handle)
-{
-    report_printf("MidiMon: A new MIDI device has been connected");
-    return 1;
-}
-
-/*
- * midi_dev_disconnected
- * Handles a MIDI device disconnected message from the MIDIEvent module.
- * As there's no way of necessarily knowing which device was disconnected and they may be
- * renumbered, this will just set no device.
- */
-int midi_dev_disconnected(WimpMessage *message, void *handle)
-{
-    report_printf("MidiMon: A MIDI device has been disconnected");
-    device_num = -1;            // flag no selected device
-    return 1;
 }
 
 /*
