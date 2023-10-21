@@ -1,5 +1,12 @@
 _TaskName:MidiMon
-# Messages exported from Resource File version 101
+
+# Meesages for printing in the monitor window
+MIDIEvents|Error:A MIDI error has occurred.
+MIDIEvents|Connect:A device has been connected.
+MIDIEvents|Disconnect:A device has been disconnected.
+MIDIEvents|Initialise:MIDI Module has been initialised.
+MIDIEvents|Dying:MIDI Module is dying.
+MIDIEvents|Unknown:Unknown event received
 
 # Messages for object ProgInfo (class ProgInfo)
 

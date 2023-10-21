@@ -15,7 +15,7 @@
 
  /*
   * Application: !Midimon
-  * File: midi.c
+  * File: midi.h
   * Author: Lauren Rad
   * Purpose: Code for interacting with the USBMIDI module (Header)
   */

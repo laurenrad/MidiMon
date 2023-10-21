@@ -28,6 +28,8 @@
 #include "kernel.h"
 #include "swis.h"
 #include "event.h"
+#include "msgs.h"
+#include "msgtrans.h"
 
 // MidiMon stuff
 #include "common.h"
@@ -47,6 +49,8 @@ typedef struct PollWordData {
     int key_count;
     int midi_count;
 } PollWordData;
+
+char strbuf[MaxLine];
 
 /*
  * device_count
@@ -106,6 +110,12 @@ int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void 
         report_printf("MidiMon: Received MIDI event %d",midi_event);
 #endif
 
+        /* The only events or services I'm consistently getting from either module
+         * at this point are MIDI_DataReceived and MIDI_Error.
+         * Not only are the others currently untested, but unfortunately they
+         * can't currently be relied on to detect device changes or lack of
+         * running module.
+         */
         switch (midi_event) {
             case MIDI_DataReceived:
             /* MidiSupport will tack on the port number to padding as well, so
@@ -130,21 +140,27 @@ int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void 
             /* The rest of these aren't fully implemented yet. */
             case MIDI_Error:
             report_printf("MidiMon: A MIDI error has occurred");
+            add_to_monitor(msgs_lookup("MIDIEvents|Error:A MIDI error has occurred."));
             break;
             case MIDI_Connect:
             report_printf("MidiMon: A MIDI device has been connected");
+            add_to_monitor(msgs_lookup("MIDIEvents|Connect:A device has been connected."));
             break;
             case MIDI_Disconnect:
             report_printf("MidiMon: A MIDI device has been disconnected");
+            add_to_monitor(msgs_lookup("MIDIEvents|Disconnect:A device has been disconnected."));
             break;
             case MIDI_Initialised:
             report_printf("MidiMon: MIDI Module has been initialised");
+            add_to_monitor(msgs_lookup("MIDIEvents|Initialised:MIDI module has been initialised."));
             break;
             case MIDI_Dying:
             report_printf("MidiMon: MIDI Module is dying");
+            add_to_monitor(msgs_lookup("MIDIEvents|Dying:MIDI module is dying."));
             break;
             default:
             report_printf("MidiMon: Unknown event received from MIDIEvent: %d",midi_event);
+            add_to_monitor(msgs_lookup("MIDIEvents|Unknown:Unknown event received"));
             break;
         }
         return 1;
@@ -588,7 +604,7 @@ void parse_command(int command, char *buf, int buf_size)
     report_printf("parsing command. in_sysex=%d status=%x size=%x data1=%x data2=%x port=%d", in_sysex, status, size, data1, data2, port);
 #endif
     if (in_sysex) { // handle sysex bytes until done
-        bufpos += snprintf(buf, buf_size, "[%d:  System Exclusive]",port);
+        bufpos += snprintf(buf, buf_size, "IN  [%d:  System Exclusive]",port);
         if (bufpos > buf_size-1)
             return; //buffer full, truncate
         for (int i = 0; i < size; i++) {
@@ -596,7 +612,7 @@ void parse_command(int command, char *buf, int buf_size)
             if (status == 0xF7) {
                 in_sysex = 0;
                 snprintf(buf+(sizeof(char)*bufpos),
-                        buf_size, " [%d:  System Exclusive End]",port);
+                        buf_size, "IN  [%d:  System Exclusive End]",port);
                 break;
             }
 
@@ -610,7 +626,7 @@ void parse_command(int command, char *buf, int buf_size)
     else if (status >= 0x80 && status <= 0xEF) {     // channel-specific
         channel = status & 0x0F;        // lower nibble is channel
         status = status & 0xF0; // higher nibble command
-        bufpos += snprintf(buf,buf_size,"[%d:%2d:",port,channel+1); // add port and channel
+        bufpos += snprintf(buf,buf_size,"IN  [%d:%2d:",port,channel+1); // add port and channel
         if (bufpos > buf_size-1)
             return;
         buf += sizeof(char)*bufpos;
@@ -641,7 +657,7 @@ void parse_command(int command, char *buf, int buf_size)
             break;
         }
     } else {                    // Not channel-specific
-        bufpos += snprintf(buf,buf_size,"[%d:  ",port); // add port
+        bufpos += snprintf(buf,buf_size,"IN  [%d:  ",port); // add port
         if (bufpos > buf_size-1)
             return;
         buf += sizeof(char)*bufpos;
