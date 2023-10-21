@@ -23,7 +23,7 @@
 #ifndef MIDIMON_MONITOR_H
 #define MIDIMON_MONITOR_H
 
-int window_monitor_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int window_monitor_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 void add_to_monitor(char *buf);
 void update_device_display(void);
 

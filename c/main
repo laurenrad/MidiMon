@@ -231,12 +231,12 @@ void register_handlers(void)
      */
     event_register_toolbox_handler(-1, 1, quit_event, NULL);
     event_register_toolbox_handler(-1, Toolbox_Error, tbox_error_handler, NULL);
+    event_register_toolbox_handler(-1, Toolbox_ObjectAutoCreated, window_monitor_oncreate, NULL);
 
     /*
      * Toolbox events - window shown
      */
     event_register_toolbox_handler(-1, Event_Windows_ShowChoices, window_choices_onshow, NULL);
-    event_register_toolbox_handler(-1, Event_Windows_ShowMonitor, window_monitor_onshow, NULL);
     event_register_toolbox_handler(-1, Event_Windows_ShowPiano, window_piano_onshow, NULL);
     event_register_toolbox_handler(-1, Event_Windows_ShowMessages, window_messages_onshow, NULL);
     event_register_toolbox_handler(-1, Event_Windows_ShowSong, window_song_onshow, NULL);
