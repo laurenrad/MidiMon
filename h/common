@@ -25,8 +25,14 @@
 
 #include "choices.h"
 
+/* This enum represents the detected characteristics of the MIDI module present on
+ * startup. */
+enum ModuleType { Mod_Legacy, Mod_USB };
+
 extern Choices global_choices;
 extern int device_num;
+extern enum ModuleType g_modtype;
+
 
 /*
  * Constants for event numbers.

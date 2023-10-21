@@ -197,12 +197,11 @@ int read_rx_command(int device)
  * tx_noteon
  * Sends a note on message; oct_shift can shift octave up and down, but if this
  * results in out of range note number it will be ignored.
- * Returns 0 on success or the most recent error status given by the MIDI module on
+ * Returns 0 on success or 1 on error.
  * failure.
  */
 int tx_noteon(int note, int velocity, int oct_shift)
 {
-    int status = 0;             // error status, if any
     _kernel_oserror *err;
 
     note = note + (12 * oct_shift);
@@ -210,18 +209,21 @@ int tx_noteon(int note, int velocity, int oct_shift)
     report_printf("MidiMon: Note on tx: %d", note);
 #endif
 
-    snprintf(strbuf,MaxLine,"OUT [%d:%2d:Note On] Note=%d Velocity=%d",device_num,
-             global_choices.opt_txchan,note,velocity);
-    add_to_monitor(strbuf); // report in monitor
-
+    // USB-MIDI will return errors in R0 and R1 here but that can't be relied on.
     err = _swix(MIDI_SetTxChannel, _IN(0), global_choices.opt_txchan);
-    err = _swix(MIDI_TxNoteOn, _INR(0, 1) | _OUT(1), note, velocity, &status);
+    err = _swix(MIDI_TxNoteOn, _INR(0, 1), note, velocity);
 
     if (err != NULL) {
-        return err->errnum;
+        report_printf("MidiMon: Error trying to send note on: %s %d",err->errmess,err->errnum);
+        return 1;
+    }
+    else {
+        snprintf(strbuf,MaxLine,"OUT [%d:%2d:Note On] Note=%d Velocity=%d",device_num,
+                 global_choices.opt_txchan,note,velocity);
+        add_to_monitor(strbuf); // report in monitor
     }
 
-    return status;
+    return 0;
 }
 
 /*
@@ -230,12 +232,17 @@ int tx_noteon(int note, int velocity, int oct_shift)
  * This doesn't use MIDI_TxNoteOff for reasons I don't remember, but are probably valid.
  * Depending on the global choice opt_altnoteoff, this will either send a note off message
  * for the given note, or a zero-velocity note on message.
- * Returns 0 on success or most recent module error code on failure.
+ * Returns 0 on success or 1 on failure.
  */
 int tx_noteoff(int note, int velocity, int oct_shift)
 {
     note = note + (12 * oct_shift);
     _kernel_oserror *err;
+
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: Note off tx: note=%d, vel=%d, chan=%d", note, velocity,
+                  global_choices.opt_txchan);
+#endif
 
     if (global_choices.opt_altnoteoff == 1) {   // zero velocity note on
         err = _swix(MIDI_SetTxChannel, _IN(0), global_choices.opt_txchan);
@@ -250,16 +257,13 @@ int tx_noteoff(int note, int velocity, int oct_shift)
     }
 
     if (err != NULL) {
-        return err->errnum;
+        report_printf("MidiMon: Error trying to send note off: %s %d",err->errmess,err->errnum);
+        return 1;
+    } else {
+        snprintf(strbuf,MaxLine,"OUT [%d:%2d:Note Off] Note=%d Velocity=%d",device_num,
+                 global_choices.opt_txchan,note,velocity);
+        add_to_monitor(strbuf);
     }
-
-#ifdef REPORTER_DEBUG
-    report_printf("MidiMon: Note off tx: note=%d, vel=%d, chan=%d", note, velocity,
-                  global_choices.opt_txchan);
-#endif
-    snprintf(strbuf,MaxLine,"OUT [%d:%2d:Note Off] Note=%d Velocity=%d",device_num,
-             global_choices.opt_txchan,note,velocity);
-    add_to_monitor(strbuf); // report in monitor
 
     return 0;
 }
@@ -559,7 +563,8 @@ void report_midi_error(void)
 /*
  * get_product_name
  * Returns a pointer to the name of a given device. Devices are numbered 1-4.
- * Returns NULL if anything goes wrong.
+ * Returns NULL if anything goes wrong. It's recommended to check that this is
+ * a USB module before calling.
  */
 char *get_product_name(int device)
 {

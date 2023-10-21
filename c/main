@@ -52,6 +52,7 @@
 
 #define WimpVersion	310
 struct Choices global_choices;
+enum ModuleType g_modtype = Mod_Legacy; // module type
 int device_num = -1;            // device number, numbered 0-3
 static WimpPollBlock poll_block;
 static MessagesFD messages;
@@ -112,28 +113,33 @@ int main(void)
      * device scanning. But it may still need to improve its handling of
      * this in the event the MIDI module dies while the app is running.
      */
-    err = _swix(MIDI_USBInfo, _IN(0), 0);
+    err = _swix(MIDI_Init, _IN(0), 0);
     if (err != NULL && err->errnum == Error_SWINotKnown) {
         werr(1, "No MIDI module loaded!");
     } else {
         /*
          * Initial device setup.
-         * This should be able to use the new features of USB-MIDI 0.08 to
-         * get the actual device names.
-         * For now, this is hardcoded to use the first device as hardware/module
-         * issues have prevented me from testing anything else.
+         * This will attempt to handle the absense of MIDI_USBInfo, but it will
+         * need to be tested with an older version of MidiSupport or something
+         * that doesn't have it.
          */
         int device_count;
-        _swi(MIDI_USBInfo, _IN(0) | _OUT(0), 0, &device_count);
-        report_printf("MidiMon: MIDI Devices Connected: %d", device_count);
-        if (device_count > 0) {
-            device_num = 0;     // default to the 1st device
-            // Beware! MIDI_USBInfo numbers 1-4, not 0-3.
+        err = _swix(MIDI_USBInfo, _IN(0) | _OUT(0), 0, &device_count);
+        if (err != NULL && err->errnum == Error_SWINotKnown) {
+            device_count = 1; // If this is a legacy driver, assume it only supports 1 device
+            g_modtype = Mod_Legacy; // set known module type to legacy
+            report_printf("MidiMon: Starting with legacy module.");
+        } else {
+            // Beware !
             for (int i = 1; i <= device_count; i++) {
-                report_printf("  Device %d: %s", i, get_product_name(i));
+                report_printf("  Device %d: %s",i,get_product_name(i));
             }
-            clear_rx_buf();    // clear rx buffers to ensure events will fire
+            g_modtype = Mod_USB; // This should either be USB-MIDI or a Pete's MidiSupport
+            report_printf("MidiMon: Starting with USB module.");
         }
+        device_num = 0; // default to the first device
+        clear_rx_buf(); // clear rx buffers to ensure events will fire
+        report_printf("MidiMon: MIDI Devices Connected: %d", device_count);
     }
 
     /*

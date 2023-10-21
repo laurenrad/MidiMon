@@ -81,9 +81,14 @@ int update_devices_menu(int event_code, ToolboxEvent *event, IdBlock *id_block, 
     for (int component = 0; component < MAX_DEVICES; component++) {
         if (component < devices) {
             menu_set_fade(0, menu_id, component, 0);    // unfade
-            prodname = get_product_name(component + 1); // devices are numbered 1-4 here
-            snprintf(entrystring, PRODNAME_LENGTH, "%d %s", component + 1, prodname);
-            menu_set_entry_text(0, menu_id, component, entrystring);
+            // if this is a USB module, get the product name from the module. Otherwise just num.
+            if (g_modtype == Mod_USB && (prodname = get_product_name(component+1)) != NULL) {
+                snprintf(entrystring, PRODNAME_LENGTH, "%d %s", component+1, prodname);
+                menu_set_entry_text(0, menu_id, component, entrystring);
+            } else {
+                snprintf(entrystring, PRODNAME_LENGTH, "%d", component+1);
+                menu_set_entry_text(0, menu_id, component, entrystring);
+            }
         } else {
             menu_set_fade(0, menu_id, component, 1);    // fade
         }
