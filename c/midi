@@ -214,7 +214,7 @@ int tx_noteon(int note, int velocity, int oct_shift)
     err = _swix(MIDI_TxNoteOn, _INR(0, 1), note, velocity);
 
     if (err != NULL) {
-        report_printf("MidiMon: Error trying to send note on: %s %d",err->errmess,err->errnum);
+        report_printf("MidiMon: Error trying to send note on: %d %s",err->errnum,err->errmess);
         return 1;
     }
     else {
@@ -257,7 +257,7 @@ int tx_noteoff(int note, int velocity, int oct_shift)
     }
 
     if (err != NULL) {
-        report_printf("MidiMon: Error trying to send note off: %s %d",err->errmess,err->errnum);
+        report_printf("MidiMon: Error trying to send note off: %d %s",err->errnum,err->errmess);
         return 1;
     } else {
         snprintf(strbuf,MaxLine,"OUT [%d:%2d:Note Off] Note=%d Velocity=%d",device_num,
@@ -274,13 +274,20 @@ int tx_noteoff(int note, int velocity, int oct_shift)
  */
 void tx_progchg(int prog)
 {
-    _swi(MIDI_TxProgramChange, _IN(0), prog);
+    _kernel_oserror *err;
 
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Prog change tx: prog=%d", prog);
 #endif
-    snprintf(strbuf,MaxLine,"OUT [%d:  :Program Change] Program=%d",device_num,prog);
-    add_to_monitor(strbuf);
+
+    err = _swix(MIDI_TxProgramChange, _IN(0), prog);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send prog change: %d %s",err->errnum,err->errmess);
+    } else {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Program Change] Program=%d",device_num,prog);
+        add_to_monitor(strbuf);
+    }
 }
 
 /*
@@ -289,14 +296,20 @@ void tx_progchg(int prog)
  */
 void tx_controlchg(int control, int value)
 {
-    _swi(MIDI_TxControlChange, _INR(0, 1), control, value);
+    _kernel_oserror *err;
 
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Control change tx: control=%d, value=%d", control, value);
 #endif
-    snprintf(strbuf,MaxLine,"OUT [%d:  :Controller Change] Controller=%d Value=%d",device_num,
-             control,value);
-    add_to_monitor(strbuf);
+    err = _swix(MIDI_TxControlChange, _INR(0, 1), control, value);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send ctrl change: %d %s",err->errnum,err->errmess);
+    } else {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Controller Change] Controller=%d Value=%d",device_num,
+                 control,value);
+        add_to_monitor(strbuf);
+    }
 }
 
 /*
@@ -305,13 +318,20 @@ void tx_controlchg(int control, int value)
  */
 void tx_songstart(void)
 {
-    _swi(MIDI_TxStart, 0);
+    _kernel_oserror *err;
 
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Song start tx");
 #endif
-    snprintf(strbuf,MaxLine,"OUT [%d:  :Song Start]",device_num);
-    add_to_monitor(strbuf);
+
+    err = _swix(MIDI_TxStart, 0);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send song start: %d %s",err->errnum,err->errmess);
+    } else {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Song Start]",device_num);
+        add_to_monitor(strbuf);
+    }
 }
 
 /*
@@ -320,13 +340,20 @@ void tx_songstart(void)
  */
 void tx_songcontinue(void)
 {
-    _swi(MIDI_TxContinue, 0);
+    _kernel_oserror *err;
 
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Song continue tx");
 #endif
-    snprintf(strbuf,MaxLine,"OUT [%d:  :Song Continue]",device_num);
-    add_to_monitor(strbuf);
+
+    err = _swix(MIDI_TxContinue, 0);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send song cont: %d %s",err->errnum,err->errmess);
+    } else {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Song Continue]",device_num);
+        add_to_monitor(strbuf);
+    }
 }
 
 /*
@@ -335,12 +362,20 @@ void tx_songcontinue(void)
  */
 void tx_songstop(void)
 {
-    _swi(MIDI_TxStop, 0);
+    _kernel_oserror *err;
+
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Song stop tx");
 #endif
-    snprintf(strbuf,MaxLine,"OUT [%d:  :Song Stop]",device_num);
-    add_to_monitor(strbuf);
+
+    err = _swix(MIDI_TxStop, 0);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send song stop: %d %s",err->errnum,err->errmess);
+    } else {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Song Stop]",device_num);
+        add_to_monitor(strbuf);
+    }
 }
 
 /*
@@ -349,12 +384,20 @@ void tx_songstop(void)
  */
 void tx_songsel(int num)
 {
-    _swi(MIDI_TxSongSelect, _IN(0), num);
+    _kernel_oserror *err;
+
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Song sel tx: song=%d", num);
 #endif
-    snprintf(strbuf,MaxLine,"OUT [%d:  :Song Select] Song=%d",device_num,num);
-    add_to_monitor(strbuf);
+
+    err = _swix(MIDI_TxSongSelect, _IN(0), num);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send song sel: %d %s",err->errnum,err->errmess);
+    } else {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Song Select] Song=%d",device_num,num);
+        add_to_monitor(strbuf);
+    }
 }
 
 /*
@@ -363,12 +406,20 @@ void tx_songsel(int num)
  */
 void tx_tunereq(void)
 {
-    _swi(MIDI_TxTuneRequest, 0);
+    _kernel_oserror *err;
+
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Tune request tx");
 #endif
-    snprintf(strbuf,MaxLine,"OUT [%d:  :Tune Request]",device_num);
-    add_to_monitor(strbuf);
+
+    err = _swix(MIDI_TxTuneRequest, 0);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send tune req: %d %s",err->errnum,err->errmess);
+    } else {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Tune Request]",device_num);
+        add_to_monitor(strbuf);
+    }
 }
 
 /*
@@ -377,12 +428,19 @@ void tx_tunereq(void)
  */
 void tx_sysreset(void)
 {
-    _swi(MIDI_TxSystemReset, 0);
+    _kernel_oserror *err;
+
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: System reset tx");
 #endif
-    snprintf(strbuf,MaxLine,"OUT [%d:  :System Reset]",device_num);
-    add_to_monitor(strbuf);
+    err = _swix(MIDI_TxSystemReset, 0);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send system reset: %d %s",err->errnum,err->errmess);
+    } else {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :System Reset]",device_num);
+        add_to_monitor(strbuf);
+    }
 }
 
 /*
@@ -391,12 +449,19 @@ void tx_sysreset(void)
  */
 void tx_pitchwheel(int pitch)
 {
-    _swi(MIDI_TxPitchWheel, _IN(0), pitch);
+    _kernel_oserror *err;
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Pitch wheel tx: pitch=%d", pitch);
 #endif
-    snprintf(strbuf,MaxLine,"OUT [%d:  :Pitch Wheel] Pitch=%d",device_num,pitch);
-    add_to_monitor(strbuf);
+
+    err = _swix(MIDI_TxPitchWheel, _IN(0), pitch);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send pitch wheel: %d %s",err->errnum,err->errmess);
+    } else {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Pitch Wheel] Pitch=%d",device_num,pitch);
+        add_to_monitor(strbuf);
+    }
 }
 
 /*
