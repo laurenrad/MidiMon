@@ -92,6 +92,7 @@ int save_choices(void)
 /*
  * load_choices
  * Load the choices from the choices file and store them in the global choices struct.
+ * Returns 0 on success or silent error, 1 if path is not set.
  */
 int load_choices(void)
 {
@@ -100,7 +101,8 @@ int load_choices(void)
     if (getenv("Choices$Path") != NULL) {
         snprintf(choices_path_env, MAX_PATHNAME, "%s", getenv("Choices$Path"));
     } else {
-        report_printf("MidiMon: Err: Choices$Path not set.");   // TBD real error
+        report_printf("MidiMon: Err: Choices$Path not set.");
+        global_choices = init_choices(); // use defaults for this session
         return 1;
     }
 #ifdef REPORTER_DEBUG
