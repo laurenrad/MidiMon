@@ -119,15 +119,6 @@ int button_sendsongsel(int event_code, ToolboxEvent *event, IdBlock *id_block, v
     int song_num = 0;
 
     numberrange_get_value(0, window_id_song, Gadget_Song_SongNum, &song_num);
-    /*
-     * Writable numberranges can be overflowed by entering extremely large values, which
-     * break the validation. So this is some safety to snap the values back into a valid
-     * range if necessary.
-     */
-    if (song_num > 127) {
-        numberrange_set_value(0, window_id_song, Gadget_Song_SongNum, 127);
-        song_num = 127;
-    }
     tx_songsel(song_num);
 
     return 1;
