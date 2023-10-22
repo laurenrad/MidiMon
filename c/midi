@@ -106,7 +106,6 @@ int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void 
     char printbuf[MaxLine];
     int command;
     int midi_event;
-    int buffree = -1;
 
     if (pword->midi_count > 0) {
         _swi(MIDIEvent_GetMIDIEvent,_OUT(0),&midi_event);
