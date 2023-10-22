@@ -62,7 +62,6 @@ int choices_cancel_button_click(int event_code, ToolboxEvent *event, IdBlock *id
                                 void *handle);
 void refresh_gadgets(Choices c, IdBlock *id_block);
 void store_gadgets(Choices *c, IdBlock *id_block);
-void load_messages_choiceswin(void);
 
 /*
  * window_choices_onshow
@@ -75,7 +74,6 @@ int window_choices_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block
     if (!choices_opened) {
         choices_opened = true;
         window_id_choices = id_block->self_id;  // save ObjectId for later use
-        load_messages_choiceswin();     // load messages
     }
     refresh_gadgets(global_choices, id_block);  // sync gadgets with choices
     event_register_toolbox_handler(-1, Event_Choices_Set, choices_set_button_click, NULL);
@@ -186,55 +184,4 @@ void action_choices(Choices *const c)
     ignore_timing(c->opt_ignoreclock);
     fake_fast_clock(c->opt_fakefastclock);
     set_hw_delay(c->opt_usehwdelay);
-}
-
-/*
- * load_messages_choiceswin
- * Look up messages with MessageTrans and update gadget labels.
- */
-void load_messages_choiceswin(void)
-{
-    _kernel_oserror *err;
-
-    // Set window and gadget text
-    err = window_set_title(0, window_id_choices, msgs_lookup("Choices|1:Choices"));
-    button_set_value(0, window_id_choices, Gadget_Choices_TxChanLabel,
-                     msgs_lookup("Choices|4:Tx Channel"));
-    actionbutton_set_text(0, window_id_choices, Gadget_Choices_DefaultButton,
-                          msgs_lookup("Choices|12:Default"));
-    actionbutton_set_text(0, window_id_choices, Gadget_Choices_SaveButton,
-                          msgs_lookup("Choices|14:Save"));
-    actionbutton_set_text(0, window_id_choices, Gadget_Choices_CancelButton,
-                          msgs_lookup("Choices|16:Cancel"));
-    actionbutton_set_text(0, window_id_choices, Gadget_Choices_SetButton,
-                          msgs_lookup("Choices|18:Set"));
-    optionbutton_set_label(0, window_id_choices, Gadget_Choices_AltNoteOff,
-                           msgs_lookup("Choices|6:Zero Velocity Note Off"));
-    optionbutton_set_label(0, window_id_choices, Gadget_Choices_IgnoreClock,
-                           msgs_lookup("Choices|8:Ignore Clock Messages"));
-    optionbutton_set_label(0, window_id_choices, Gadget_Choices_FakeFastClock,
-                           msgs_lookup("Choices|10:Fake Fast Clock"));
-
-    // Set help text
-    gadget_set_help_message(0, window_id_choices, Gadget_Choices_TxChan,
-                            msgs_lookup("Choices|2:Unable to get help."));
-    gadget_set_help_message(0, window_id_choices, Gadget_Choices_AltNoteOff,
-                            msgs_lookup("Choices|5:Unable to get help."));
-    gadget_set_help_message(0, window_id_choices, Gadget_Choices_IgnoreClock,
-                            msgs_lookup("Choices|7:Unable to get help."));
-    gadget_set_help_message(0, window_id_choices, Gadget_Choices_FakeFastClock,
-                            msgs_lookup("Choices|9:Unable to get help."));
-    gadget_set_help_message(0, window_id_choices, Gadget_Choices_DefaultButton,
-                            msgs_lookup("Choices|11:Unable to get help."));
-    gadget_set_help_message(0, window_id_choices, Gadget_Choices_SaveButton,
-                            msgs_lookup("Choices|13:Unable to get help."));
-    gadget_set_help_message(0, window_id_choices, Gadget_Choices_CancelButton,
-                            msgs_lookup("Choices|15:Unable to get help."));
-    gadget_set_help_message(0, window_id_choices, Gadget_Choices_SetButton,
-                            msgs_lookup("Choices|17:Unable to get help."));
-
-    if (err != NULL) {
-        report_printf("MidiMon: err: in load_messages_choiceswin - %d %s", err->errnum,
-                      err->errmess);
-    }
 }

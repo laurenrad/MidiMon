@@ -98,7 +98,6 @@ int slider_valuechange(int event_code, ToolboxEvent *event, IdBlock *id_block, v
 int key_pressed(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
 int key_clicked(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
 int slider_snap(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
-void load_messages_pianowin(void);
 int hotkeys_enabled(void);
 int has_caret(void);
 int get_velocity(void);
@@ -118,7 +117,6 @@ int window_piano_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, 
         window_id_piano = id_block->self_id;
 
         window_get_tool_bars(0x09, window_id_piano, &tbar_id_h, NULL, NULL, &tbar_id_v);
-        load_messages_pianowin();
 
         event_register_toolbox_handler(-1, Slider_ValueChanged, slider_valuechange, NULL);
         event_register_wimp_handler(-1, Wimp_EMouseClick, key_clicked, 0);
@@ -384,46 +382,6 @@ int key_clicked(int event_code, WimpPollBlock * event, IdBlock * id_block, void 
     }
 
     return 1;
-}
-
-/* load_messages_pianowin
- * Loads Messages with MessageTrans. This one is a bit different because all the translatable
- * gadgets are on toolbars.
- */
-void load_messages_pianowin(void)
-{
-    _kernel_oserror *err;
-    ObjectId toolbar_id_h, toolbar_id_v;
-
-    /*
-     * Get ObjectIds of the toolbars
-     */
-    window_get_tool_bars(0, window_id_piano, &toolbar_id_h, NULL, NULL, &toolbar_id_v);
-
-    /*
-     * Set gadget and window text
-     */
-    err = window_set_title(0, window_id_piano, msgs_lookup("Piano|1:err")); // window title
-    button_set_value(0, toolbar_id_h, Gadget_Piano_VelLabel,
-                     msgs_lookup("Piano|53:err")); // piano velocity label
-    button_set_value(0, toolbar_id_h, Gadget_Piano_OctLabel,
-                     msgs_lookup("Piano|57:err")); // piano octave label
-    optionbutton_set_label(0, toolbar_id_h, Gadget_Piano_TypeNotes,
-                     msgs_lookup("Piano|51:err")); // type notes option
-
-    /*
-     * Set help text
-     */
-    gadget_set_help_message(0, toolbar_id_h, Gadget_Piano_TypeNotes,
-                            msgs_lookup("Piano|50:Unable to get help."));
-    gadget_set_help_message(0, toolbar_id_h, Gadget_Piano_Vel,
-                            msgs_lookup("Piano|54:Unable to get help."));
-    gadget_set_help_message(0, toolbar_id_h, Gadget_Piano_Oct,
-                            msgs_lookup("Piano|55:Unable to get help."));
-
-    if (err != NULL) {
-        report_printf("MidiMon: err in load_messages_pianowin - %d: %s", err->errnum, err->errmess);
-    }
 }
 
 /*

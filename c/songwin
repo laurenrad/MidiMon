@@ -49,7 +49,6 @@ int button_songstart(int event_code, ToolboxEvent *event, IdBlock *id_block, voi
 int button_songcontinue(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int button_songstop(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int button_sendsongsel(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-void load_messages_songwin(void);
 
 /*
  * window_song_onshow
@@ -62,7 +61,6 @@ int window_song_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, v
     if (song_opened == false) {
         song_opened = true;
         window_id_song = id_block->self_id;
-        load_messages_songwin();
         event_register_toolbox_handler(-1, Event_Song_Start, button_songstart, NULL);
         event_register_toolbox_handler(-1, Event_Song_Continue, button_songcontinue, NULL);
         event_register_toolbox_handler(-1, Event_Song_Stop, button_songstop, NULL);
@@ -129,42 +127,4 @@ int button_sendsongsel(int event_code, ToolboxEvent *event, IdBlock *id_block, v
     tx_songsel(song_num);
 
     return 1;
-}
-
-void load_messages_songwin(void)
-{
-    _kernel_oserror *err;
-
-    /*
-     * Window and gadget text
-     */
-    err = window_set_title(0, window_id_song, msgs_lookup("SongControl|1:err")); // window title
-    button_set_value(0, window_id_song, Gadget_Song_SongNumLabel,
-                     msgs_lookup("SongControl|9:Song Select"));   // song select label
-    actionbutton_set_text(0, window_id_song, Gadget_Song_Start,
-                          msgs_lookup("SongControl|3:Start"));    // start button
-    actionbutton_set_text(0, window_id_song, Gadget_Song_Continue,
-                          msgs_lookup("SongControl|5:Continue")); // continue button
-    actionbutton_set_text(0, window_id_song, Gadget_Song_Stop,
-                          msgs_lookup("SongControl|7:Stop"));     // stop button
-    actionbutton_set_text(0, window_id_song, Gadget_Song_SongSelSend,
-                          msgs_lookup("SongControl|12:Send"));    // song select send button
-
-    /*
-     * Help text
-     */
-    gadget_set_help_message(0, window_id_song, Gadget_Song_Start,
-                            msgs_lookup("SongControl|2:Unable to get help."));  // start button
-    gadget_set_help_message(0, window_id_song, Gadget_Song_Continue,
-                            msgs_lookup("SongControl|4:Unable to get help."));  // continue button
-    gadget_set_help_message(0, window_id_song, Gadget_Song_Stop,
-                            msgs_lookup("SongControl|6:Unable to get help."));  // stop button
-    gadget_set_help_message(0, window_id_song, Gadget_Song_SongSelSend,
-                            msgs_lookup("SongControl|11:Unable to get help.")); // song select send
-    gadget_set_help_message(0, window_id_song, Gadget_Song_SongNum,
-                            msgs_lookup("SongControl|10:Unable to get help.")); // song number
-
-    if (err != NULL) {
-        report_printf("MidiMon: err in load_messages_songwin - %d: %s", err->errnum, err->errmess);
-    }
 }

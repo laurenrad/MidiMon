@@ -58,7 +58,6 @@ int clear_scrolllist(int event_code, ToolboxEvent *event, IdBlock *id_block, voi
 int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int menu_setup(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-void load_messages_monitorwin(void);
 
 /*
  * window_monitor_onshow
@@ -75,7 +74,6 @@ int window_monitor_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_blo
     if (strcmp(e->template_name,"Monitor") == 0) {
         report_printf("window_monitor_oncreate: Monitor created");
         window_id_main = id_block->self_id;
-        load_messages_monitorwin();
         // Invert ScrollList colours
         scrolllist_set_colour(0, window_id_main, Gadget_Monitor_ScrollList, -256, 0);
         event_register_toolbox_handler(-1, Event_Monitor_ClearLog, clear_scrolllist, NULL);
@@ -234,36 +232,4 @@ int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, vo
     report_printf("Buf sizes: 0=%d 1=%d 2=%d 3=%d",buf1,buf2,buf3,buf4);
 
     return 1;
-}
-
-/*
- * load_messages_monitorwin
- * Load Messages with MessageTrans.
- */
-void load_messages_monitorwin(void)
-{
-    _kernel_oserror *err;
-
-    /*
-     * Set gadget and window text
-     */
-    err = window_set_title(0, window_id_main, msgs_lookup("Monitor|1:Monitor")); // window title
-    displayfield_set_value(0, window_id_main, Gadget_Monitor_DeviceDisplay,
-                           msgs_lookup("Monitor|6:No device")); // device displayfield
-    button_set_value(0, window_id_main, Gadget_Monitor_DeviceLabel,
-                     msgs_lookup("Monitor|4:Device")); // device label (actually a button)
-
-    /*
-     * Set help strings
-     * The ScrollList help text doesn't actually show for some reason though.
-     */
-    gadget_set_help_message(0, window_id_main, Gadget_Monitor_ScrollList,
-                            msgs_lookup("Monitor|2:Unable to get help."));
-    gadget_set_help_message(0, window_id_main, Gadget_Monitor_DeviceDisplay,
-                            msgs_lookup("Monitor|5:Unable to get help."));
-
-    if (err != NULL) {
-        report_printf("MidiMon: err in load_messages_monitorwin - %d: %s", err->errnum,
-                      err->errmess);
-    }
 }
