@@ -64,7 +64,6 @@ int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, v
 int quit_event(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int show_help(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-//int pollword_nonzero(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
 int quit_message(WimpMessage *message, void *handle);
 void register_handlers(void);
 
@@ -97,11 +96,10 @@ int main(void)
     //event_set_mask(0x1831);
     event_set_mask(0x400001);
 
-
     register_handlers();        // Register event and message handlers
 
-    if (load_choices() != 0) {  // Something went wrong -- like Choices$Path is set incorrectly
-        exit(EXIT_FAILURE);
+    if (load_choices() != 0) {  // Load choices and warn if something is wrong
+        werr(0, "Couldn't locate Choices. Defaults will be used for this session.");
     }
 
     /*
@@ -115,7 +113,7 @@ int main(void)
      */
     err = _swix(MIDI_Init, _IN(0), 0);
     if (err != NULL && err->errnum == Error_SWINotKnown) {
-        werr(1, "No MIDI module loaded!");
+        werr(1, "Unable to load a MIDI module! Quitting...");
     } else {
         /*
          * Initial device setup.
@@ -130,14 +128,14 @@ int main(void)
             g_modtype = Mod_Legacy; // set known module type to legacy
             report_printf("MidiMon: Starting with legacy module.");
         } else {
-            // Beware !
+            // for USB-MIDI devices should be numbered from 1
             for (int i = 1; i <= device_count; i++) {
                 report_printf("  Device %d: %s",i,get_product_name(i));
             }
             g_modtype = Mod_USB; // This should either be USB-MIDI or a Pete's MidiSupport
             report_printf("MidiMon: Starting with USB module.");
         }
-        device_num = 0; // default to the first device
+        device_num = 0; // default to the first device for output
         clear_rx_buf(); // clear rx buffers to ensure events will fire
         report_printf("MidiMon: MIDI Devices Connected: %d", device_count);
     }
@@ -151,7 +149,6 @@ int main(void)
     /*
      * Initialise MessageTrans
      */
-
      msgs_init();
      cb = msgs_main_control_block(); // save pointer to control block
 
@@ -159,7 +156,10 @@ int main(void)
      *  Prepare to communicate with modules
      */
      int pollword;
-    _swi(MIDIEvent_GetPollWord, _OUT(0), &pollword);
+    err = _swix(MIDIEvent_GetPollWord, _OUT(0), &pollword);
+    if (err != NULL) {
+        werr(1, "Unable to communicate with MIDIEvent! Quitting...");
+    }
 
     /*
      * Begin poll loop
