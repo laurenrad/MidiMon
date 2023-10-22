@@ -51,6 +51,10 @@
 #define Gadget_Msg_TuneReqLabel		0x16    // Label: "Tune Request" (actually a button)
 #define Gadget_Msg_SysResetLabel	0x17    // Label: "System Reset" (actually a button)
 #define Gadget_Msg_MiscLblBox		0x1A    // Label: "Misc" (actually a button)
+#define Gadget_Msg_BankSelectMSB        0x1B    // Bank Select MSB
+#define Gadget_Msg_BankSelectLSB        0x1E    // Bank Select LSB
+#define Gadget_Msg_BankSelectOpt        0x1F    // Option: Bank Select
+#define Gadget_Msg_BankSelectMSB        0x1B
 
 static ObjectId window_id_messages = -1;
 static bool messages_opened = false;    // Track if we know the window ID yet
@@ -113,7 +117,16 @@ int stringset_programchg(int event_code, ToolboxEvent *event, IdBlock *id_block,
  */
 int button_progchgsend(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-    int prog = 0;
+    int prog = 0, state = 0, msb = 0, lsb = 0;
+
+    /* Check if a bank select needs to happen first */
+    optionbutton_get_state(0, window_id_messages, Gadget_Msg_BankSelectOpt, &state);
+    if (state) {
+        numberrange_get_value(0, window_id_messages, Gadget_Msg_BankSelectMSB, &msb);
+        numberrange_get_value(0, window_id_messages, Gadget_Msg_BankSelectLSB, &lsb);
+        tx_controlchg(0, msb); // send msb
+        tx_controlchg(32, lsb); // send lsb
+    }
 
     numberrange_get_value(0, window_id_messages, Gadget_Msg_ProgChgNum, &prog);
     tx_progchg(prog);
