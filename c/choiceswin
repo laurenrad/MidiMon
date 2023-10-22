@@ -20,7 +20,6 @@
  * Purpose: Wimp handlers for Choices window and associated helpers.
  */
 
-// Library stuff
 #include <stdbool.h>
 #include <string.h>
 
@@ -31,7 +30,8 @@
 #include "gadgets.h"
 #include "window.h"
 #include "msgs.h"               // RISC_OSLib
-#include "msgtrans.h"
+#include "msgtrans.h"           // RISC_OSLib
+#include "werr.h"               // RISC_OSLib
 
 // MidiMon stuff
 #include "choices.h"
@@ -102,7 +102,7 @@ int choices_save_button_click(int event_code, ToolboxEvent *event, IdBlock *id_b
     store_gadgets(&global_choices, id_block);
     if (save_choices() != 0) {
         report_printf("MidiMon: Error writing out Choices file");
-        exit(EXIT_FAILURE);
+        werr(0,"Unable to write Choices file. Choices will not be saved.");
     }
     action_choices(&global_choices);
 
@@ -184,7 +184,6 @@ void store_gadgets(Choices *c, IdBlock *id_block)
  * Take action on choices after they're loaded or set. This only applies to choices where
  * immediate action is needed rather than being read later, like when a SWI is needed to
  * set an option with the MIDI module.
- * This probably should be done differently.
  */
 void action_choices(Choices *const c)
 {
