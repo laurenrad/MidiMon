@@ -80,17 +80,6 @@ extern enum ModuleType g_modtype;
 #define Event_Iconbar_Panic             0xFE4   // Force notes off
 
 /*
- * Messages - allocated and registered with ROOL.
- */
-#define Message_MIDIDataReceived	0x5A4C0 // MIDI data received
-#define Message_MIDIError		0x5A4C1 // MIDI error
-#define Message_MIDIDevConnect		0x5A4C2 // A USB MIDI device was connected
-#define Message_MIDIDevDisconnect	0x5A4C3 // A USB MIDI device was disconnected
-#define Message_MIDIInit		0x5A4C4 // USB MIDI module has initialised
-#define Message_MIDIDying		0x5A4C5 // USB MIDI module is dying
-#define Message_KeyEvent		0x5A500 // Key up events
-
-/*
  * Errors
  */
 #define Error_SWINotKnown		0x1E6
