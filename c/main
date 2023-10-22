@@ -223,6 +223,15 @@ int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, v
     report_printf("MidiMon: A toolbox error occurred: %d %s", e->errnum, e->errmess);
 #endif
 
+    switch (e->errnum) {
+        case 8435251:
+            werr(0, "To save, drag the icon to a directory display.");
+        break;
+        default:
+            werr(0, "Toolbox error %d: %s",e->errnum,e->errmess);
+        break;
+    }
+
     return 1;
 }
 

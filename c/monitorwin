@@ -115,7 +115,6 @@ int clear_scrolllist(int event_code, ToolboxEvent *event, IdBlock *id_block, voi
  */
 void add_to_monitor(char *buf)
 {
-    char printbuf[MaxLine];
     scrolllist_add_item(ScrollList_AddItem_MakeVisible, window_id_main,
                         Gadget_Monitor_ScrollList, buf, NULL, NULL, -1);
 }
@@ -144,11 +143,11 @@ int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *
     if (id_block->parent_component == MenuEntry_Monitor_Save) {
         /*
          * Must provide the estimated file size. This is tough to do accurately
-         * * because of the lazy way the text is just being stored in the ScrollList,
-         * * but how important is this? At any rate this will err on the side of
-         * * overestimating because it will multiply the maximum line length by
-         * * number of lines. If proper allocation is done later this will be
-         * * reworked.
+         * because of the lazy way the text is just being stored in the ScrollList,
+         * but how important is this? At any rate this will err on the side of
+         * overestimating because it will multiply the maximum line length by
+         * number of lines. If proper allocation is done later this will be
+         * reworked.
          */
         scrolllist_count_items(0, window_id_main, Gadget_Monitor_ScrollList, &item_count);
         size_estimate = item_count * (unsigned int)MaxLine;
