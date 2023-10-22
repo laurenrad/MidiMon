@@ -98,7 +98,6 @@ int button_songcontinue(int event_code, ToolboxEvent *event, IdBlock *id_block, 
     return 1;
 }
 
-/* Button handler for Stop button. Tx song stop message */
 /*
  * button_songstop
  * This handler is called when the Stop button is clicked.
@@ -121,10 +120,9 @@ int button_sendsongsel(int event_code, ToolboxEvent *event, IdBlock *id_block, v
 
     numberrange_get_value(0, window_id_song, Gadget_Song_SongNum, &song_num);
     /*
-     * Making the numberrange writable allows it to have invalid (positive) values.
-     * There might be a standard way to handle this, but for now if it's out of range set it
-     * back to 127. Setting the numberrange fails on very large values, but it still sends 127
-     * so this should be ok enough for now.
+     * Writable numberranges can be overflowed by entering extremely large values, which
+     * break the validation. So this is some safety to snap the values back into a valid
+     * range if necessary.
      */
     if (song_num > 127) {
         numberrange_set_value(0, window_id_song, Gadget_Song_SongNum, 127);
