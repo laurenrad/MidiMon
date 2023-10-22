@@ -49,13 +49,6 @@ extern enum ModuleType g_modtype;
 #define MIDIEvent_KeyEvent      1
 #define MIDIEvent_MIDIEvent     2
 
-/* Events - Window show */
-#define Event_Windows_ShowMonitor	0xF10   // Main window is shown
-#define Event_Windows_ShowSong		0xF11   // Song Control window is shown
-#define Event_Windows_ShowChoices	0xF12   // Choices window is shown
-#define Event_Windows_ShowPiano		0xF13   // Piano window is shown
-#define Event_Windows_ShowMessages	0xF14   // Messages window is shown
-
 /* Events - Send Messages window */
 #define Event_Msg_SendProgChg	   	0xFA1   // Tx Program Change
 #define Event_Msg_TxCntrlChg		0xFA2   // Tx Control Change

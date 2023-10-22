@@ -23,6 +23,6 @@
 #ifndef MIDIMON_SONGWIN_H
 #define MIDIMON_SONGWIN_H
 
-int window_song_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int window_song_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 
 #endif

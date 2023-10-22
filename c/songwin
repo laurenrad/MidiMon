@@ -21,6 +21,7 @@
 */
 
 #include <stdbool.h>
+#include <string.h>
 
 #include "toolbox.h"
 #include "gadgets.h"
@@ -43,7 +44,6 @@
 #define Gadget_Song_SongSelSend		0x05    // Song select send
 
 static ObjectId window_id_song;   // ObjectId of this window
-static bool song_opened = false;  // Track if window_id_song is known
 
 int button_songstart(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int button_songcontinue(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
@@ -51,23 +51,29 @@ int button_songstop(int event_code, ToolboxEvent *event, IdBlock *id_block, void
 int button_sendsongsel(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 
 /*
- * window_song_onshow
- * This handler is called when the Song window is shown.
+ * window_song_oncreate
+ * This handler is called when the Song window is created.
  * This performs first-time setup, such as storing the ObjectId, loading Messages,
  * and registering event handlers.
  */
-int window_song_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+int window_song_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-    if (song_opened == false) {
-        song_opened = true;
+    ToolboxObjectAutoCreatedEvent *e = (ToolboxObjectAutoCreatedEvent *)event;
+
+    if (strcmp(e->template_name,"SongControl") == 0) {
+#ifdef REPORTER_DEBUG
+        report_printf("MidiMon: SongControl created");
+#endif
         window_id_song = id_block->self_id;
         event_register_toolbox_handler(-1, Event_Song_Start, button_songstart, NULL);
         event_register_toolbox_handler(-1, Event_Song_Continue, button_songcontinue, NULL);
         event_register_toolbox_handler(-1, Event_Song_Stop, button_songstop, NULL);
         event_register_toolbox_handler(-1, Event_Song_SendSongSel, button_sendsongsel, NULL);
+
+        return 1;
     }
 
-    return 1;
+    return 0;
 }
 
 /*

@@ -29,9 +29,9 @@
 
 /*
  * window_choices_onshow
- * This handler is called when the Choices window is shown.
+ * This handler is called when the Choices window is created.
  */
-int window_choices_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int window_choices_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 
 /*
  * Make certain current choices take effect immediately.

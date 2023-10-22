@@ -237,15 +237,18 @@ void register_handlers(void)
      */
     event_register_toolbox_handler(-1, 1, quit_event, NULL);
     event_register_toolbox_handler(-1, Toolbox_Error, tbox_error_handler, NULL);
-    event_register_toolbox_handler(-1, Toolbox_ObjectAutoCreated, window_monitor_oncreate, NULL);
 
     /*
-     * Toolbox events - window shown
+     * Toolbox events - objects created / shown
+     * These are called on creation or showing of autocreated objects, so that ObjectIds can be
+     * stored and additional setup can be performed for each object, including registering
+     * more handlers.
      */
-    event_register_toolbox_handler(-1, Event_Windows_ShowChoices, window_choices_onshow, NULL);
-    event_register_toolbox_handler(-1, Event_Windows_ShowPiano, window_piano_onshow, NULL);
-    event_register_toolbox_handler(-1, Event_Windows_ShowMessages, window_messages_onshow, NULL);
-    event_register_toolbox_handler(-1, Event_Windows_ShowSong, window_song_onshow, NULL);
+    event_register_toolbox_handler(-1, Toolbox_ObjectAutoCreated, window_monitor_oncreate, NULL);
+    event_register_toolbox_handler(-1, Toolbox_ObjectAutoCreated, window_piano_oncreate, NULL);
+    event_register_toolbox_handler(-1, Toolbox_ObjectAutoCreated, window_song_oncreate, NULL);
+    event_register_toolbox_handler(-1, Toolbox_ObjectAutoCreated, window_choices_oncreate, NULL);
+    event_register_toolbox_handler(-1, Toolbox_ObjectAutoCreated, window_messages_oncreate, NULL);
     event_register_toolbox_handler(-1, ProgInfo_AboutToBeShown, proginfo_onshow, NULL);
 
     /*

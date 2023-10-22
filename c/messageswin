@@ -22,6 +22,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "toolbox.h"
 #include "gadgets.h"
@@ -66,15 +67,19 @@ int button_txtunereq(int event_code, ToolboxEvent *event, IdBlock *id_block, voi
 int button_txsysreset(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 
 /*
- * window_messages_onshow
- * This handler is called when the Send Messages window is shown.
- * On the first time the window is seen, this registers handlers, saves the ObjectId,
- * and does any miscellaneous first-time setup that may be needed.
+ * window_messages_oncreate
+ * This handler is called when the Send Messages window is created.
+ * Registers handlers, saves the ObjectId, and does any miscellaneous
+ * first-time setup that may be needed.
  */
-int window_messages_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+int window_messages_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-    if (messages_opened == false) {
-        messages_opened = true;
+    ToolboxObjectAutoCreatedEvent *e = (ToolboxObjectAutoCreatedEvent *)event;
+
+    if (strcmp(e->template_name,"Messages") == 0) {
+#ifdef REPORTER_DEBUG
+        report_printf("MidiMon: Messages created");
+#endif
         window_id_messages = id_block->self_id;
         // load GM program names from the Messages file
         stringset_set_available(0, window_id_messages, Gadget_Msg_ProgChgStr,
@@ -84,9 +89,11 @@ int window_messages_onshow(int event_code, ToolboxEvent *event, IdBlock *id_bloc
         event_register_toolbox_handler(-1, Event_Msg_TxTuneReq, button_txtunereq, NULL);
         event_register_toolbox_handler(-1, Event_Msg_TxSysReset, button_txsysreset, NULL);
         event_register_toolbox_handler(-1, StringSet_ValueChanged, stringset_programchg, NULL);
+
+        return 1;
     }
 
-    return 1;
+    return 0;
 }
 
 /*

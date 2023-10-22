@@ -27,6 +27,6 @@
  * Handler to register for the Send messages window to be shown. It will do the rest of the
  * setup itself.
  */
-int window_messages_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int window_messages_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 
 #endif

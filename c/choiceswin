@@ -22,6 +22,7 @@
 
 // Library stuff
 #include <stdbool.h>
+#include <string.h>
 
 #include "kernel.h"
 #include "swis.h"
@@ -64,25 +65,33 @@ void refresh_gadgets(Choices c, IdBlock *id_block);
 void store_gadgets(Choices *c, IdBlock *id_block);
 
 /*
- * window_choices_onshow
+ * window_choices_create
  * This handler is called when the choices window is shown. This does any first-time setup
  * for the window, and makes sure the window is in step with any choices changes that
  * may have happened while it was closed.
  */
-int window_choices_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+int window_choices_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-    if (!choices_opened) {
-        choices_opened = true;
-        window_id_choices = id_block->self_id;  // save ObjectId for later use
-    }
-    refresh_gadgets(global_choices, id_block);  // sync gadgets with choices
-    event_register_toolbox_handler(-1, Event_Choices_Set, choices_set_button_click, NULL);
-    event_register_toolbox_handler(-1, Event_Choices_Save, choices_save_button_click, NULL);
-    event_register_toolbox_handler(-1, Event_Choices_Default, choices_default_button_click, NULL);
-    event_register_toolbox_handler(-1, Event_Choices_Cancel, choices_cancel_button_click, NULL);
+    ToolboxObjectAutoCreatedEvent *e = (ToolboxObjectAutoCreatedEvent *)event;
 
-    return 1;
+    if (strcmp(e->template_name,"Choices") == 0) {
+#ifdef REPORTER_DEBUG
+        report_printf("MidiMon: Choices created");
+#endif
+        window_id_choices = id_block->self_id;  // save ObjectId for later use
+        refresh_gadgets(global_choices, id_block);  // sync gadgets with choices
+        event_register_toolbox_handler(-1, Event_Choices_Set, choices_set_button_click, NULL);
+        event_register_toolbox_handler(-1, Event_Choices_Save, choices_save_button_click, NULL);
+        event_register_toolbox_handler(-1, Event_Choices_Default, choices_default_button_click,
+                                       NULL);
+        event_register_toolbox_handler(-1, Event_Choices_Cancel, choices_cancel_button_click, NULL);
+
+        return 1;
+    }
+
+    return 0;
 }
+
 
 /*
  * choices_save_button_click

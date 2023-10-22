@@ -67,12 +67,11 @@ int menu_setup(int event_code, ToolboxEvent *event, IdBlock *id_block, void *han
 int window_monitor_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
     ToolboxObjectAutoCreatedEvent *e = (ToolboxObjectAutoCreatedEvent *)event;
-#ifdef REPORTER_DEBUG
-    report_printf("MidiMon: window_monitor_oncreate: %s created.",e->template_name);
-#endif
 
     if (strcmp(e->template_name,"Monitor") == 0) {
-        report_printf("window_monitor_oncreate: Monitor created");
+#ifdef REPORTER_DEBUG
+        report_printf("MidiMon: Monitor created");
+#endif
         window_id_main = id_block->self_id;
         // Invert ScrollList colours
         scrolllist_set_colour(0, window_id_main, Gadget_Monitor_ScrollList, -256, 0);
