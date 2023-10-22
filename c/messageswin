@@ -58,7 +58,6 @@
 #define Gadget_Msg_BankSelectMSB        0x1B
 
 static ObjectId window_id_messages = -1;
-static bool messages_opened = false;    // Track if we know the window ID yet
 
 int stringset_programchg(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int button_progchgsend(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
