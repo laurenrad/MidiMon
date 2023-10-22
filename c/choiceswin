@@ -49,6 +49,7 @@
 #define Gadget_Choices_CancelButton	0x07    // cancel action button
 #define Gadget_Choices_SetButton	0x08    // set action button
 #define Gadget_Choices_UseHWDelay       0x09    // use hardware delay option button
+#define Gadget_Choices_Outbound         0x0A    // show outbound comomands in monitor window
 
 static ObjectId window_id_choices; // stored ObjectId of this window
 static bool choices_opened = false; // track whether the ID is known
@@ -154,6 +155,7 @@ void refresh_gadgets(Choices c, IdBlock *id_block)
     optionbutton_set_state(0, id_block->self_id, Gadget_Choices_IgnoreClock, c.opt_ignoreclock);
     optionbutton_set_state(0, id_block->self_id, Gadget_Choices_FakeFastClock, c.opt_fakefastclock);
     optionbutton_set_state(0, id_block->self_id, Gadget_Choices_UseHWDelay, c.opt_usehwdelay);
+    optionbutton_set_state(0, id_block->self_id, Gadget_Choices_Outbound, c.opt_showoutbound);
 }
 
 /*
@@ -168,6 +170,7 @@ void store_gadgets(Choices *c, IdBlock *id_block)
     optionbutton_get_state(0, id_block->self_id, Gadget_Choices_FakeFastClock,
                            &(c->opt_fakefastclock));
     optionbutton_get_state(0, id_block->self_id, Gadget_Choices_UseHWDelay, &(c->opt_usehwdelay));
+    optionbutton_get_state(0, id_block->self_id, Gadget_Choices_Outbound, &(c->opt_showoutbound));
 }
 
 /*

@@ -30,7 +30,8 @@ typedef struct Choices {
     int opt_altnoteoff;          // Alternate zero velocity note off
     int opt_ignoreclock;         // Ignore clock messages
     int opt_fakefastclock;       // Use fake fast clock - for now this is set for all devices
-    int opt_usehwdelay; // Use hardware delay
+    int opt_usehwdelay;          // Use hardware delay
+    int opt_showoutbound;        // Show outbound commands
 } Choices;
 
 extern Choices global_choices;  // This will be defined in main
@@ -42,6 +43,7 @@ extern Choices global_choices;  // This will be defined in main
 #define DEFAULTS_OPT_IGNORECLOCK	0
 #define DEFAULTS_OPT_FAKEFASTCLOCK	0
 #define DEFAULTS_OPT_USEHWDELAY         0
+#define DEFAULTS_OPT_SHOWOUTBOUND       1
 
 /* max pathname length - 1000 should be enough here because every time i've
 tried to make paths this long to test, the filer died horribly anyway */

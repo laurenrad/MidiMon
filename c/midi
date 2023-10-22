@@ -217,7 +217,7 @@ int tx_noteon(int note, int velocity, int oct_shift)
         report_printf("MidiMon: Error trying to send note on: %d %s",err->errnum,err->errmess);
         return 1;
     }
-    else {
+    else if (global_choices.opt_showoutbound) {
         snprintf(strbuf,MaxLine,"OUT [%d:%2d:Note On] Note=%d Velocity=%d",device_num,
                  global_choices.opt_txchan,note,velocity);
         add_to_monitor(strbuf); // report in monitor
@@ -259,7 +259,7 @@ int tx_noteoff(int note, int velocity, int oct_shift)
     if (err != NULL) {
         report_printf("MidiMon: Error trying to send note off: %d %s",err->errnum,err->errmess);
         return 1;
-    } else {
+    } else if (global_choices.opt_showoutbound) {
         snprintf(strbuf,MaxLine,"OUT [%d:%2d:Note Off] Note=%d Velocity=%d",device_num,
                  global_choices.opt_txchan,note,velocity);
         add_to_monitor(strbuf);
@@ -284,7 +284,7 @@ void tx_progchg(int prog)
 
     if (err != NULL) {
         report_printf("MidiMon: Error trying to send prog change: %d %s",err->errnum,err->errmess);
-    } else {
+    } else if (global_choices.opt_showoutbound) {
         snprintf(strbuf,MaxLine,"OUT [%d:  :Program Change] Program=%d",device_num,prog);
         add_to_monitor(strbuf);
     }
@@ -305,7 +305,7 @@ void tx_controlchg(int control, int value)
 
     if (err != NULL) {
         report_printf("MidiMon: Error trying to send ctrl change: %d %s",err->errnum,err->errmess);
-    } else {
+    } else if (global_choices.opt_showoutbound) {
         snprintf(strbuf,MaxLine,"OUT [%d:  :Controller Change] Controller=%d Value=%d",device_num,
                  control,value);
         add_to_monitor(strbuf);
@@ -328,7 +328,7 @@ void tx_songstart(void)
 
     if (err != NULL) {
         report_printf("MidiMon: Error trying to send song start: %d %s",err->errnum,err->errmess);
-    } else {
+    } else if (global_choices.opt_showoutbound) {
         snprintf(strbuf,MaxLine,"OUT [%d:  :Song Start]",device_num);
         add_to_monitor(strbuf);
     }
@@ -350,7 +350,7 @@ void tx_songcontinue(void)
 
     if (err != NULL) {
         report_printf("MidiMon: Error trying to send song cont: %d %s",err->errnum,err->errmess);
-    } else {
+    } else if (global_choices.opt_showoutbound) {
         snprintf(strbuf,MaxLine,"OUT [%d:  :Song Continue]",device_num);
         add_to_monitor(strbuf);
     }
@@ -372,7 +372,7 @@ void tx_songstop(void)
 
     if (err != NULL) {
         report_printf("MidiMon: Error trying to send song stop: %d %s",err->errnum,err->errmess);
-    } else {
+    } else if (global_choices.opt_showoutbound) {
         snprintf(strbuf,MaxLine,"OUT [%d:  :Song Stop]",device_num);
         add_to_monitor(strbuf);
     }
@@ -394,7 +394,7 @@ void tx_songsel(int num)
 
     if (err != NULL) {
         report_printf("MidiMon: Error trying to send song sel: %d %s",err->errnum,err->errmess);
-    } else {
+    } else if (global_choices.opt_showoutbound) {
         snprintf(strbuf,MaxLine,"OUT [%d:  :Song Select] Song=%d",device_num,num);
         add_to_monitor(strbuf);
     }
@@ -416,7 +416,7 @@ void tx_tunereq(void)
 
     if (err != NULL) {
         report_printf("MidiMon: Error trying to send tune req: %d %s",err->errnum,err->errmess);
-    } else {
+    } else if (global_choices.opt_showoutbound) {
         snprintf(strbuf,MaxLine,"OUT [%d:  :Tune Request]",device_num);
         add_to_monitor(strbuf);
     }
@@ -437,7 +437,7 @@ void tx_sysreset(void)
 
     if (err != NULL) {
         report_printf("MidiMon: Error trying to send system reset: %d %s",err->errnum,err->errmess);
-    } else {
+    } else if (global_choices.opt_showoutbound) {
         snprintf(strbuf,MaxLine,"OUT [%d:  :System Reset]",device_num);
         add_to_monitor(strbuf);
     }
@@ -458,7 +458,7 @@ void tx_pitchwheel(int pitch)
 
     if (err != NULL) {
         report_printf("MidiMon: Error trying to send pitch wheel: %d %s",err->errnum,err->errmess);
-    } else {
+    } else if (global_choices.opt_showoutbound) {
         snprintf(strbuf,MaxLine,"OUT [%d:  :Pitch Wheel] Pitch=%d",device_num,pitch);
         add_to_monitor(strbuf);
     }

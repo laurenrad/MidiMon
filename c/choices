@@ -42,6 +42,7 @@ Choices init_choices(void)
     c.opt_ignoreclock = DEFAULTS_OPT_IGNORECLOCK;
     c.opt_fakefastclock = DEFAULTS_OPT_FAKEFASTCLOCK;
     c.opt_usehwdelay = DEFAULTS_OPT_USEHWDELAY;
+    c.opt_showoutbound = DEFAULTS_OPT_SHOWOUTBOUND;
     return c;
 }
 
@@ -111,12 +112,13 @@ int load_choices(void)
          * And if this didn't work, just generate the defaults in our instance.
          * No need to save it as it's just the defaults, that will be handled if
          * something changes.
+         * Also, output to reporter, but this will happen on first run or upgrade,
+         * so this can just be done silently otherwise.
          */
         global_choices = init_choices();
         report_printf("MidiMon: Choices file not found. Using defaults.");
     } else {
         if (fread(&global_choices, sizeof(global_choices), 1, choices_file) < 1) {
-            // TBD proper error here as well
             report_printf("MidiMon: Err: Opened Choices file but wasn't able to read it.");
             global_choices = init_choices();    // choices file was unreadable, use defaults
         } else {
