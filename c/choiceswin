@@ -53,7 +53,6 @@
 #define Gadget_Choices_Outbound         0x0A    // show outbound comomands in monitor window
 
 static ObjectId window_id_choices; // stored ObjectId of this window
-static bool choices_opened = false; // track whether the ID is known
 
 int choices_set_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int choices_save_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
