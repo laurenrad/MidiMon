@@ -50,6 +50,7 @@ Choices init_choices(void)
  * save_choices
  * Save current choices to the choices file.
  * MidiMon saves its choices in a single flat file in the choices dir.
+ * Returns nonzero on error.
  */
 int save_choices(void)
 {
@@ -63,11 +64,13 @@ int save_choices(void)
     if (getenv("Choices$Write") != NULL) {
         snprintf(choices_write_path, MAX_PATHNAME, "%s.", getenv("Choices$Write"));
     } else {
-        report_printf("MidiMon: Err: Choices$Write not set.");  // TBD: real error
+        report_printf("MidiMon: Err: Choices$Write not set.");
         return 1;
     }
 
+#ifdef REPORTER_DEBUG
     report_printf("MidiMon: Choices$Write is: %s", choices_write_path);
+#endif
     strncat(choices_write_path, LEAFNAME, MAX_PATHNAME - strlen(choices_write_path));
 
     choices_file = fopen(choices_write_path, "wb");
