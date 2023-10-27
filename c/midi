@@ -76,7 +76,6 @@ int device_count(void)
     return count;
 }
 
-
 /*
  * clear_rx_buf
  * New and simplified, this will just force clear all Rx Buffers.
@@ -208,7 +207,8 @@ int tx_noteon(int note, int velocity, int oct_shift)
     report_printf("MidiMon: Note on tx: %d", note);
 #endif
 
-    // USB-MIDI will return errors in R0 and R1 here but that can't be relied on.
+    // USB-MIDI will return errors in R0 and R1 here but that can't be relied on at the moment
+    // if multiple modules are to be supported.
     err = _swix(MIDI_SetTxChannel, _IN(0), global_choices.opt_txchan);
     err = _swix(MIDI_TxNoteOn, _INR(0, 1), note, velocity);
 
@@ -675,7 +675,8 @@ void parse_command(int command, char *buf, int buf_size)
     int bufpos = 0; // track used buffer length
 
 #ifdef REPORTER_DEBUG
-    report_printf("parsing command. in_sysex=%d status=%x size=%x data1=%x data2=%x port=%d", in_sysex, status, size, data1, data2, port);
+    report_printf("MidiMon: parsing cmd. in_sysex=%d status=%x size=%x data1=%x data2=%x port=%d",
+                  in_sysex, status, size, data1, data2, port);
 #endif
     if (in_sysex) { // handle sysex bytes until done
         bufpos += snprintf(buf, buf_size, "IN  [%d:  System Exclusive]",port);
@@ -736,7 +737,7 @@ void parse_command(int command, char *buf, int buf_size)
             return;
         buf += sizeof(char)*bufpos;
         switch (status) {
-        case 0xF0:             // System Exclusive. Not fully implemented but at least reports that there was one
+        case 0xF0:             // System Exclusive. Not fully implemented.
             snprintf(buf, buf_size, "System Exclusive] 0x%2x 0x%2x", data1, data2);
             in_sysex = 1;
             break;
