@@ -37,6 +37,7 @@
 #include "saveas.h"
 #include "msgs.h"               // RISC_OSLib
 #include "msgtrans.h"           // RISC_OSLib
+#include "werr.h"               // RISC_OSLib
 
 // MidiMon stuff
 #include "monitorwin.h"
@@ -157,11 +158,17 @@ int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *
         err = scrolllist_get_item_text(0, window_id_main, Gadget_Monitor_ScrollList,
                                        buf, MaxLine, selected, NULL);
         if (err != NULL) {
-            report_printf("err: %d; %s\n", err->errnum, err->errmess);
-            size_estimate = strlen(buf);
-            report_printf("size estimate: %d", size_estimate);
-            saveas_set_file_size(0, id_block->self_id, size_estimate);
+#ifdef REPORTER_DEBUG
+            report_printf("MidiMon: err: %d; %s\n", err->errnum, err->errmess);
+#endif
+            werr(0,"Error saving selection. Try selecting something?");
+            return 1; // most likely reason for error here is no selection was made.
         }
+        size_estimate = strlen(buf);
+#ifdef REPORTER_DEBUG
+        report_printf("MidiMon: File save size estimate: %d", size_estimate);
+#endif
+        saveas_set_file_size(0, id_block->self_id, size_estimate);
     } else {
         return 0; // quit without handling if this was called from somewhere else
     }
@@ -181,8 +188,7 @@ int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *
          * just created. Just notify Toolbox and throw up a dialogue for now
          */
         saveas_file_save_completed(0, id_block->self_id, filename);
-        _kernel_oserror e = { 255, "Unable to create file." };
-        wimp_report_error(&e, 0, "MidiMon", NULL, NULL, NULL);
+        werr(0, "Unable to create file while saving.");
     } else {
         if (id_block->parent_component == MenuEntry_Monitor_Save) {
             /*
@@ -211,7 +217,7 @@ int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *
 
 /*
  * test_button_click
- * This is actually for a menu item now, but this allows a debug option to
+ * This is actually a menu item now, but this allows a debug option to
  * add things to the scrolllist without needing actual MIDI messages.
  */
 int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
