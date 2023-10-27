@@ -166,7 +166,7 @@ int slider_snap(int event_code, WimpPollBlock *event, IdBlock *id_block, void *h
 
     if (id_block->parent_id == window_id_piano     // filter for pitch bend
         && id_block->self_component == Gadget_Piano_PitchBend) {   // then for adjust clicks
-        if (m->buttons == 1) {
+        if (m->buttons == 1) { // adjust click
             int current_val;
             slider_get_value(0, id_block->self_id, Gadget_Piano_PitchBend, &current_val);
             /*
@@ -192,11 +192,12 @@ int slider_snap(int event_code, WimpPollBlock *event, IdBlock *id_block, void *h
  * this handler will call a SWI to get info from the key buffer.
  * The way all this works is nonstandard but it allows the program to respond to key up events
  * and ignore key repeat.
- * The main disadvantage currently is that this is tied to a QWERTY layout and doesn't know
+ * The main disadvantage currently is that this is tied to a QWERTY layout and doesn't
  * necessarily handle the caret properly.
  */
 int key_pressed(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
 {
+    _kernel_oserror *err;
     WimpPollWordNonZeroEvent *e = (WimpPollWordNonZeroEvent *)event;
     PollWordData *pword = (PollWordData *)(e->poll_word);
     ComponentId component = 0;
@@ -206,10 +207,10 @@ int key_pressed(int event_code, WimpPollBlock *event, IdBlock *id_block, void *h
     int key_num, state;
 
     if (pword->key_count > 0) {
-        _swix(MIDIEvent_GetKeypress,_OUT(0)|_OUT(2),&key_num,&state);
+        err = _swix(MIDIEvent_GetKeypress,_OUT(0)|_OUT(2),&key_num,&state);
 
-        if (key_num == -1) {
-            report_printf("Couldn't get keypress!");
+        if (key_num == -1 || err != NULL) {
+            report_printf("MidiMon: Couldn't get keypress!");
             return 1;
         }
 
@@ -349,7 +350,7 @@ int key_pressed(int event_code, WimpPollBlock *event, IdBlock *id_block, void *h
         return 1;
     }
 
-    /* If there was no key event, see if there are any MIDI events.
+    /* If there was no key event, return unhandled to see if there are any MIDI events.
        In practice, this shouldn't happen as midi_incoming was registered after
        and has higher priority, but it's best practice to leave it here */
     return 0;
@@ -406,7 +407,9 @@ int hotkeys_enabled(void)
 int get_velocity(void)
 {
     int velocity;
+
     numberrange_get_value(0, tbar_id_h, Gadget_Piano_Vel, &velocity);
+
     return velocity;
 }
 
@@ -417,7 +420,9 @@ int get_velocity(void)
 int get_octave(void)
 {
     int octave;
+
     numberrange_get_value(0, tbar_id_h, Gadget_Piano_Oct, &octave);
+
     return octave;
 }
 
@@ -427,14 +432,14 @@ int get_octave(void)
  */
 int has_caret(void)
 {
-    _kernel_oserror *err = NULL;
+    _kernel_oserror *err;
     WimpGetCaretPositionBlock b;       // in wimp.h
     int window_handle_piano;    // Wimp handle of piano window
 
     err = wimp_get_caret_position(&b);
     window_get_wimp_handle(0, window_id_piano, &window_handle_piano);
     if (err != NULL) {
-        report_printf("an error occurred in has_caret: %d %s", err->errnum, err->errmess);
+        report_printf("MidiMon: An error occurred in has_caret: %d %s", err->errnum, err->errmess);
     } else {
         if (b.window_handle == window_handle_piano) {
             return 1;

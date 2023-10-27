@@ -233,7 +233,7 @@ int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, vo
     _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), 1 << 1, &buf2);
     _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), 2 << 1, &buf3);
     _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), 3 << 1, &buf4);
-    report_printf("Buf sizes: 0=%d 1=%d 2=%d 3=%d",buf1,buf2,buf3,buf4);
+    report_printf("MidiMon: Buf sizes: 0=%d 1=%d 2=%d 3=%d",buf1,buf2,buf3,buf4);
 
     return 1;
 }
