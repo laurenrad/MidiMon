@@ -25,8 +25,14 @@
 
 #include "choices.h"
 
+/* This enum represents the detected characteristics of the MIDI module present on
+ * startup. */
+enum ModuleType { Mod_Legacy, Mod_USB };
+
 extern Choices global_choices;
 extern int device_num;
+extern enum ModuleType g_modtype;
+
 
 /*
  * Constants for event numbers.
@@ -34,12 +40,14 @@ extern int device_num;
  * here to watch out for any clashes.
  */
 
-/* Events - Window show */
-#define Event_Windows_ShowMonitor	0xF10   // Main window is shown
-#define Event_Windows_ShowSong		0xF11   // Song Control window is shown
-#define Event_Windows_ShowChoices	0xF12   // Choices window is shown
-#define Event_Windows_ShowPiano		0xF13   // Piano window is shown
-#define Event_Windows_ShowMessages	0xF14   // Messages window is shown
+/* SWIs for helper module */
+#define MIDIEvent_GetPollWord   0x5A4C0
+#define MIDIEvent_GetKeypress   0x5A4C1
+#define MIDIEvent_GetMIDIEvent  0x5A4C2
+
+/* Other helper module constants */
+#define MIDIEvent_KeyEvent      1
+#define MIDIEvent_MIDIEvent     2
 
 /* Events - Send Messages window */
 #define Event_Msg_SendProgChg	   	0xFA1   // Tx Program Change
@@ -49,6 +57,7 @@ extern int device_num;
 
 /* Events - Monitor window */
 #define Event_Monitor_ClearLog		0xFB0   // Clear the monitor log
+#define Event_Monitor_ShowMenu          0xFB1   // The menu has been shown
 #define Event_Monitor_Test		0xFBF   // Debug - monitor test button
 
 /* Events - Song Control window */
@@ -67,18 +76,8 @@ extern int device_num;
 #define Event_Iconbar_ShowDevMenu	0xFE0   // Iconbar menu: show devices menu
 #define Event_Iconbar_DeviceSelect	0xFE1   // Device menu selection
 #define Event_Iconbar_ShowHelp		0xFE2   // Iconbar menu: Help...
-#define Event_Iconbar_Panic		0xFE3   // Reset MIDI module status
-
-/*
- * Messages - allocated and registered with ROOL.
- */
-#define Message_MIDIDataReceived	0x5A4C0 // MIDI data received
-#define Message_MIDIError		0x5A4C1 // MIDI error
-#define Message_MIDIDevConnect		0x5A4C2 // A USB MIDI device was connected
-#define Message_MIDIDevDisconnect	0x5A4C3 // A USB MIDI device was disconnected
-#define Message_MIDIInit		0x5A4C4 // USB MIDI module has initialised
-#define Message_MIDIDying		0x5A4C5 // USB MIDI module is dying
-#define Message_KeyEvent		0x5A500 // Key up events
+#define Event_Iconbar_ResetMIDI		0xFE3   // Reset MIDI module status
+#define Event_Iconbar_Panic             0xFE4   // Force notes off
 
 /*
  * Errors

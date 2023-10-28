@@ -1,8 +1,0 @@
-title-string:	KeyEvent
-help-string:	KeyEvent 0.90 © Lauren Rad
-date-string: 27 Apr 2023
-
-event-handler: keyevent_entry/keyevent_handler 11 ; should use preprocessor to sub event num later
-
-initialisation-code: keyevent_init
-finalisation-code: keyevent_final

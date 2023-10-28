@@ -1,0 +1,782 @@
+/* Copyright 2023 Lauren Rad
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+ /*
+  * Application: !Midimon
+  * File: midi.c
+  * Author: Lauren Rad
+  * Purpose: Code for interacting with the USBMIDI module.
+  */
+
+#pragma check_swix_formats
+
+#include <stdio.h>
+
+#include "werr.h"               // RISC_OSLib
+#include "kernel.h"
+#include "swis.h"
+#include "event.h"
+#include "msgs.h"
+#include "msgtrans.h"
+
+// MidiMon stuff
+#include "common.h"
+#include "midi.h"
+#include "preporter.h"
+#include "monitorwin.h"
+
+/*
+ * These structs correspond to the data coming from the MIDIEvent helper module.
+ */
+typedef struct MIDIEventData {
+    int event;
+} MIDIEventData;
+
+typedef struct PollWordData {
+    int nonzero;
+    int key_count;
+    int midi_count;
+} PollWordData;
+
+char strbuf[MaxLine];
+
+void report_midi_error(void);
+
+/*
+ * device_count
+ * Returns the number of MIDI devices detected.
+ */
+int device_count(void)
+{
+    int count;
+    _kernel_oserror *err;
+
+    /*
+     * If this SWI isn't known (or anything else goes wrong, report 0
+     * devices.
+     */
+    err = _swix(MIDI_USBInfo, _IN(0) | _OUT(0), 0, &count);
+    if (err != NULL) {
+        report_printf("MidiMon: Error while scanning devices: %x %s", err->errnum, err->errmess);
+        return 0;
+    }
+
+    return count;
+}
+
+/*
+ * clear_rx_buf
+ * New and simplified, this will just force clear all Rx Buffers.
+ */
+int clear_rx_buf(void)
+{
+    _swi(MIDI_Init, _IN(0), 2);
+    return 0;
+}
+
+/*
+ * midi_incoming
+ * Handle incoming MIDI notifications from the helper module.
+ */
+#define MIDI_DataReceived   0
+#define MIDI_Error          1
+#define MIDI_Connect        10
+#define MIDI_Disconnect     11
+#define MIDI_Start          12 // not documented, not implementing here
+#define MIDI_Stop           13 // not documented, not implementing here
+#define MIDI_Initialised    20
+#define MIDI_Dying          21
+int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
+{
+    WimpPollWordNonZeroEvent *e = (WimpPollWordNonZeroEvent *)event;
+    PollWordData *pword = (PollWordData *)(e->poll_word);
+    char printbuf[MaxLine];
+    int command;
+    int midi_event;
+
+    if (pword->midi_count > 0) {
+        _swi(MIDIEvent_GetMIDIEvent,_OUT(0),&midi_event);
+#ifdef REPORTER_DEBUG
+        report_printf("MidiMon: Received MIDI event %d",midi_event);
+#endif
+
+        /* The only events or services I'm consistently getting from either module
+         * at this point are MIDI_DataReceived and MIDI_Error.
+         * Not only are the others currently untested, but unfortunately they
+         * can't currently be relied on to detect device changes or lack of
+         * running module.
+         */
+        switch (midi_event) {
+            case MIDI_DataReceived:
+            /* MidiSupport will tack on the port number to padding as well, so
+               mask it off first before checking */
+            while (((command = read_rx_command(-1)) & 0x0FFFFFFF) != 0) {
+                parse_command(command, printbuf, MaxLine);
+                add_to_monitor(printbuf);
+            }
+            /* At this point, we should be done in almost all current cases, BUT
+             * the MidiSupport module will pass through 0 padding.
+             * One solution would be to check buffer size on this end, but
+             * MIDI_InqBufferSize seems to behave inconsistently between modules
+             * and I'm not sure yet of a standard way to get max size.
+             * Note to self: report that MIDI_InqBufferSize off-by-one to Peter when
+             * I get a chance. It's reporting 2044 when clear.
+             * So for now, the cheapest solution seems to be to just force Rx
+             * buffers clear to ensure any future events will fire. Feel free to
+             * revisit decision later.
+             */
+            clear_rx_buf();
+            break;
+            /* The rest of these aren't fully implemented yet. */
+            case MIDI_Error:
+            report_printf("MidiMon: A MIDI error has occurred");
+            add_to_monitor(msgs_lookup("MIDIEvents|Error:A MIDI error has occurred."));
+            report_midi_error(); // give error details
+            break;
+            case MIDI_Connect:
+            report_printf("MidiMon: A MIDI device has been connected");
+            add_to_monitor(msgs_lookup("MIDIEvents|Connect:A device has been connected."));
+            break;
+            case MIDI_Disconnect:
+            report_printf("MidiMon: A MIDI device has been disconnected");
+            add_to_monitor(msgs_lookup("MIDIEvents|Disconnect:A device has been disconnected."));
+            device_num = -1; // flag no selected device
+            break;
+            case MIDI_Initialised:
+            report_printf("MidiMon: MIDI Module has been initialised");
+            add_to_monitor(msgs_lookup("MIDIEvents|Initialised:MIDI module has been initialised."));
+            break;
+            case MIDI_Dying:
+            report_printf("MidiMon: MIDI Module is dying");
+            add_to_monitor(msgs_lookup("MIDIEvents|Dying:MIDI module is dying."));
+            // if this happens, quit
+            // werr(1, "The MIDI module is no longer running. MidiMon will now exit.");
+            break;
+            default:
+            report_printf("MidiMon: Unknown event received from MIDIEvent: %d",midi_event);
+            add_to_monitor(msgs_lookup("MIDIEvents|Unknown:Unknown event received"));
+            break;
+        }
+        return 1;
+    }
+
+    return 0; // if there was no MIDI event, see if there are any KeyEvents
+}
+
+/*
+ * read_rx_command
+ * Returns the next message from the Rx buf. This should be called repeatedly
+ * until the buffer is clear, so new MIDIEvent messages are triggerd.
+ */
+int read_rx_command(int device)
+{
+    int command;
+    _swi(MIDI_RxCommand, _IN(0) | _OUT(0), device, &command);
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: received new command on device %d: %x",device, command);
+#endif
+
+    return command;
+}
+
+/*
+ * tx_noteon
+ * Sends a note on message; oct_shift can shift octave up and down, but if this
+ * results in out of range note number it will be ignored.
+ * Returns 0 on success or 1 on error.
+ * failure.
+ */
+int tx_noteon(int note, int velocity, int oct_shift)
+{
+    _kernel_oserror *err;
+
+    note = note + (12 * oct_shift);
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: Note on tx: %d", note);
+#endif
+
+    // USB-MIDI will return errors in R0 and R1 here but that can't be relied on at the moment
+    // if multiple modules are to be supported.
+    err = _swix(MIDI_SetTxChannel, _IN(0), global_choices.opt_txchan);
+    err = _swix(MIDI_TxNoteOn, _INR(0, 1), note, velocity);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send note on: %d %s",err->errnum,err->errmess);
+        return 1;
+    }
+    else if (global_choices.opt_showoutbound) {
+        snprintf(strbuf,MaxLine,"OUT [%d:%2d:Note On] Note=%d Velocity=%d",device_num,
+                 global_choices.opt_txchan,note,velocity);
+        add_to_monitor(strbuf); // report in monitor
+    }
+
+    return 0;
+}
+
+/*
+ * tx_noteoff
+ * Sends a note off message: as above invalid note numbers will be ignored.
+ * This doesn't use MIDI_TxNoteOff for reasons I don't remember, but are probably valid.
+ * Depending on the global choice opt_altnoteoff, this will either send a note off message
+ * for the given note, or a zero-velocity note on message.
+ * Returns 0 on success or 1 on failure.
+ */
+int tx_noteoff(int note, int velocity, int oct_shift)
+{
+    note = note + (12 * oct_shift);
+    _kernel_oserror *err;
+
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: Note off tx: note=%d, vel=%d, chan=%d", note, velocity,
+                  global_choices.opt_txchan);
+#endif
+
+    if (global_choices.opt_altnoteoff == 1) {   // zero velocity note on
+        err = _swix(MIDI_SetTxChannel, _IN(0), global_choices.opt_txchan);
+        err = _swix(MIDI_TxNoteOn, _INR(0, 1), note, 0);
+    } else {                    // note off message. Currently hardcoded port=0
+        int comm = 0;
+        comm = 0x80;            // byte 0 high bits = command
+        comm = comm | global_choices.opt_txchan - 1;    // byte 0 low bits = chan
+        comm = comm | (note << 8);      // byte 1 is note
+        comm = comm | (velocity << 16); // byte 2 is velocity
+        err = _swix(MIDI_TxCommand, _INR(0, 1), comm, 0); // send immediately
+    }
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send note off: %d %s",err->errnum,err->errmess);
+        return 1;
+    } else if (global_choices.opt_showoutbound) {
+        snprintf(strbuf,MaxLine,"OUT [%d:%2d:Note Off] Note=%d Velocity=%d",device_num,
+                 global_choices.opt_txchan,note,velocity);
+        add_to_monitor(strbuf);
+    }
+
+    return 0;
+}
+
+/*
+ * tx_progchg
+ * Sends a program change message.
+ */
+void tx_progchg(int prog)
+{
+    _kernel_oserror *err;
+
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: Prog change tx: prog=%d", prog);
+#endif
+
+    err = _swix(MIDI_TxProgramChange, _IN(0), prog);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send prog change: %d %s",err->errnum,err->errmess);
+    } else if (global_choices.opt_showoutbound) {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Program Change] Program=%d",device_num,prog);
+        add_to_monitor(strbuf);
+    }
+}
+
+/*
+ * tx_controlchg
+ * Sends a control change message.
+ */
+void tx_controlchg(int control, int value)
+{
+    _kernel_oserror *err;
+
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: Control change tx: control=%d, value=%d", control, value);
+#endif
+    err = _swix(MIDI_TxControlChange, _INR(0, 1), control, value);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send ctrl change: %d %s",err->errnum,err->errmess);
+    } else if (global_choices.opt_showoutbound) {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Controller Change] Controller=%d Value=%d",device_num,
+                 control,value);
+        add_to_monitor(strbuf);
+    }
+}
+
+/*
+ * tx_songstart
+ * Sends a songs start command.
+ */
+void tx_songstart(void)
+{
+    _kernel_oserror *err;
+
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: Song start tx");
+#endif
+
+    err = _swix(MIDI_TxStart, 0);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send song start: %d %s",err->errnum,err->errmess);
+    } else if (global_choices.opt_showoutbound) {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Song Start]",device_num);
+        add_to_monitor(strbuf);
+    }
+}
+
+/*
+ * tx_songcontinue
+ * Sends a song continue command.
+ */
+void tx_songcontinue(void)
+{
+    _kernel_oserror *err;
+
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: Song continue tx");
+#endif
+
+    err = _swix(MIDI_TxContinue, 0);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send song cont: %d %s",err->errnum,err->errmess);
+    } else if (global_choices.opt_showoutbound) {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Song Continue]",device_num);
+        add_to_monitor(strbuf);
+    }
+}
+
+/*
+ * tx_songstop
+ * Sends a song stop command.
+ */
+void tx_songstop(void)
+{
+    _kernel_oserror *err;
+
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: Song stop tx");
+#endif
+
+    err = _swix(MIDI_TxStop, 0);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send song stop: %d %s",err->errnum,err->errmess);
+    } else if (global_choices.opt_showoutbound) {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Song Stop]",device_num);
+        add_to_monitor(strbuf);
+    }
+}
+
+/*
+ * tx_songsel
+ * Sends a song select message with the given song number.
+ */
+void tx_songsel(int num)
+{
+    _kernel_oserror *err;
+
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: Song sel tx: song=%d", num);
+#endif
+
+    err = _swix(MIDI_TxSongSelect, _IN(0), num);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send song sel: %d %s",err->errnum,err->errmess);
+    } else if (global_choices.opt_showoutbound) {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Song Select] Song=%d",device_num,num);
+        add_to_monitor(strbuf);
+    }
+}
+
+/*
+ * tx_tunereq
+ * Sends a tune request command.
+ */
+void tx_tunereq(void)
+{
+    _kernel_oserror *err;
+
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: Tune request tx");
+#endif
+
+    err = _swix(MIDI_TxTuneRequest, 0);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send tune req: %d %s",err->errnum,err->errmess);
+    } else if (global_choices.opt_showoutbound) {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Tune Request]",device_num);
+        add_to_monitor(strbuf);
+    }
+}
+
+/*
+ * tx_sysreset
+ * Sends a system reset command.
+ */
+void tx_sysreset(void)
+{
+    _kernel_oserror *err;
+
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: System reset tx");
+#endif
+    err = _swix(MIDI_TxSystemReset, 0);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send system reset: %d %s",err->errnum,err->errmess);
+    } else if (global_choices.opt_showoutbound) {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :System Reset]",device_num);
+        add_to_monitor(strbuf);
+    }
+}
+
+/*
+ * tx_pitchwheel
+ * Sends a pitch wheel command.
+ */
+void tx_pitchwheel(int pitch)
+{
+    _kernel_oserror *err;
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: Pitch wheel tx: pitch=%d", pitch);
+#endif
+
+    err = _swix(MIDI_TxPitchWheel, _IN(0), pitch);
+
+    if (err != NULL) {
+        report_printf("MidiMon: Error trying to send pitch wheel: %d %s",err->errnum,err->errmess);
+    } else if (global_choices.opt_showoutbound) {
+        snprintf(strbuf,MaxLine,"OUT [%d:  :Pitch Wheel] Pitch=%d",device_num,pitch);
+        add_to_monitor(strbuf);
+    }
+}
+
+/*
+ * ignore_timing
+ * If argument is nonzero, sets the MIDI module to ignore timing messages.
+ * If argument is 0, sets the MIDI module to receive timing messages.
+ */
+void ignore_timing(int option)
+{
+    if (option == 0) {
+        _swi(MIDI_IgnoreTiming, _IN(0), 0);
+#ifdef REPORTER_DEBUG
+        report_printf("MidiMon: Timing Rx set to On.");
+#endif
+    } else {
+        _swi(MIDI_IgnoreTiming, _IN(0), 1);
+#ifdef REPORTER_DEBUG
+        report_printf("MidiMon: Timing Rx set to Off.");
+#endif
+    }
+}
+
+/*
+ * fake_fast_clock
+ * Set fake fast clock. Pass 0 for FFC off, 1 for on. Returns options bitmap or -1 on error.
+ * If argument is nonzero, enables fake fast clock in the MIDI module.
+ * If argument is zero, disables fake fast clock in the MIDI module.
+ * This is only supported by USB-MIDI.
+ * Returns options bitmap or -1 on error.
+ */
+int fake_fast_clock(int option)
+{
+    int bitmap = -1;
+    _kernel_oserror *err;
+
+    if (option == 0) {
+        err = _swix(MIDI_Options, _IN(0), 0);
+    } else {
+        err = _swix(MIDI_Options, _IN(0), 1);
+    }
+
+    err = _swix(MIDI_Options, _IN(0) | _OUT(0), -1, &bitmap);
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: FFC altered. Options bitmap is %x", bitmap);
+#endif
+    if (err != NULL) {
+        report_printf("MidiMon: error in setting ffc: %d %s",err->errnum,err->errmess);
+        return -1;
+    }
+
+    return bitmap;
+}
+
+/*
+ * set_hw_delay
+ * Set whether a hardware delay is used. For now, this will just set/unset for
+ * all devices. This may be expanded in future versions.
+ * This is only supported by USB-MIDI.
+ * If argument is nonzero, all devices will have hw delay set.
+ * If argument is zero, all devices will not have hw delay set.
+ * Returns delay bitmap or -1 on error.
+ */
+int set_hw_delay(int option)
+{
+    int bitmap = -1;
+    _kernel_oserror *err;
+
+    if (option == 0) {
+        err = _swix(MIDI_Options, _IN(1), 0x0F);
+    } else {
+        err = _swix(MIDI_Options, _IN(1), 0x00);
+    }
+
+    err = _swix(MIDI_Options, _IN(1) | _OUT(1), -1, &bitmap);
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: HW Delay altered. Options bitmap is %x", bitmap);
+#endif
+
+    if (err != NULL) {
+        report_printf("MidiMon: error in setting hw delay: %d %s",err->errnum,err->errmess);
+        return -1;
+    }
+
+    return bitmap;
+}
+
+/*
+ * reset_midi
+ * Resets the MIDI module status by calling SWI MIDI_Init.
+ */
+void reset_midi(void)
+{
+    _swi(MIDI_Init, _IN(0), 0);
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: MIDI module status reset.");
+#endif
+}
+
+/*
+ * panic_midi(void)
+ * Attempt to force off all notes on the current port and channel.
+ */
+void panic_midi(void)
+{
+    for (int note=0; note<128; note++)
+        tx_noteoff(note,0,0);
+}
+
+/*
+ * set_tx_channel
+ * Sets the Tx channel by calling SWI MIDI_SetTxChannel. Returns new channel.
+ */
+int set_tx_channel(int device, int channel)
+{
+    int new_chan = 0;
+    channel = channel + (16 * device);    // convert channel number to port number based on device
+    _swi(MIDI_SetTxChannel, _IN(0) | _OUT(0), channel, &new_chan);
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: Tx channel set. device=%d channel=%d", device, new_chan);
+#endif
+
+    return new_chan;
+}
+
+/*
+ * report_midi_error
+ * Debug function to report MIDI error messages from the MIDIEvent module.
+ * This is intended to be called only if REPORTER_DEBUG is on,
+ * as many of these errors are common and expected.
+ */
+void report_midi_error(void)
+{
+    report_printf("MidiMon: A MIDI error has occurred. Details:");
+    int err = 0;
+    _kernel_oserror *oserr = NULL;
+    oserr = _swix(MIDI_InqError, _OUT(0), &err);
+    if (oserr != NULL) {
+        report_printf("  Ironically, an error occurred while trying to get the MIDI error.");
+    } else {
+        /*
+         * each byte of err represents a different device, with LSB being dev 0.
+         */
+        int dev_errs[4];
+        dev_errs[0] = err & 0xFF;
+        dev_errs[1] = (err >> 8) & 0xFF;
+        dev_errs[2] = (err >> 16) & 0xFF;
+        dev_errs[3] = (err >> 24) & 0xFF;
+        for (int i = 0; i < 4; i++) {
+            switch (dev_errs[i]) {
+            case 0:
+                report_printf("  Device %d: No error", i);
+                break;
+            case 65:
+                report_printf("  Device %d: Error 65: Active sensing no longer received.", i);
+                break;
+            case 66:
+                report_printf("  Device %d: Error 66: Receive buffer is full, data lost.", i);
+                break;
+            case 68:
+                report_printf("  Device %d: Error 68: Unrecognised data discarded.", i);
+                break;
+            case 88:
+                report_printf("  Device %d: Error 88: USB device has been disconnected.", i);
+                break;
+            case 47:
+                report_printf("  Device %d: Error 47: USB Device not present.", i);
+                break;
+            default:
+                report_printf("  Device %d: Unrecognised error.", i);
+                break;
+            }
+        }
+    }
+
+}
+
+/*
+ * get_product_name
+ * Returns a pointer to the name of a given device. Devices are numbered 1-4.
+ * Returns NULL if anything goes wrong. It's recommended to check that this is
+ * a USB module before calling.
+ */
+char *get_product_name(int device)
+{
+    char *prod_name;
+    _kernel_oserror *err;
+    err = _swix(MIDI_USBInfo, _IN(0) | _OUT(2), device, &prod_name);
+
+    if (err != NULL) {
+        return NULL;
+    }
+
+    return prod_name;
+}
+
+/*
+ * parse_command
+ * Parses a MIDI message and puts a printable string in buf.
+ */
+void parse_command(int command, char *buf, int buf_size)
+{
+    /*
+     * unpack the message
+     */
+    unsigned int status = (unsigned int)command & 0xFF;      // byte 0: status byte
+    unsigned int size = ((unsigned int)command >> 24) & 3;     // bits 24-25 are size of command
+    unsigned int data1 = ((unsigned int)command >> 8) & 0xFF;  // byte 1: data byte 1
+    unsigned int data2 = ((unsigned int)command >> 16) & 0xFF; // byte 2: data byte 2
+    unsigned int port = ((unsigned int)command >> 28); // bits 28-31 are port number
+    int channel;
+    static int in_sysex = 0; // are we in the middle of SysEx?
+    int bufpos = 0; // track used buffer length
+
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: parsing cmd. in_sysex=%d status=%x size=%x data1=%x data2=%x port=%d",
+                  in_sysex, status, size, data1, data2, port);
+#endif
+    if (in_sysex) { // handle sysex bytes until done
+        bufpos += snprintf(buf, buf_size, "IN  [%d:  System Exclusive]",port);
+        if (bufpos > buf_size-1)
+            return; //buffer full, truncate
+        for (int i = 0; i < size; i++) {
+            status = command &0xFF;
+            if (status == 0xF7) {
+                in_sysex = 0;
+                snprintf(buf+(sizeof(char)*bufpos),
+                        buf_size, "IN  [%d:  System Exclusive End]",port);
+                break;
+            }
+
+            bufpos += snprintf(buf+(sizeof(char)*bufpos),
+                                buf_size, "0x%2x",status);
+            if (bufpos > buf_size-1)
+                return;
+            command >>= 8;
+        }
+    }
+    else if (status >= 0x80 && status <= 0xEF) {     // channel-specific
+        channel = status & 0x0F;        // lower nibble is channel
+        status = status & 0xF0; // higher nibble command
+        bufpos += snprintf(buf,buf_size,"IN  [%d:%2d:",port,channel+1); // add port and channel
+        if (bufpos > buf_size-1)
+            return;
+        buf += sizeof(char)*bufpos;
+        switch (status) {
+        case 0x80:             // Note Off
+            snprintf(buf, buf_size, "Note Off] Note=%d Velocity=%d", data1, data2);
+            break;
+        case 0x90:             // Note On
+            snprintf(buf, buf_size, "Note On] Note=%d Velocity=%d", data1, data2);
+            break;
+        case 0xA0:             // Aftertouch / Key Pressure
+            snprintf(buf, buf_size, "Aftertouch] Key=%d Pressure=%d", data1, data2);
+            break;
+        case 0xB0:             // Controller Change
+            snprintf(buf, buf_size, "Controller Change] Controller=%d Value=%d", data1, data2);
+            break;
+        case 0xC0:             // Program Change
+            snprintf(buf, buf_size, "Program Change] Program=%d", data1);
+            break;
+        case 0xD0:             // Channel Pressure
+            snprintf(buf, buf_size, "Channel Pressure] Pressure=%d", data1);
+            break;
+        case 0xE0:             // Pitch Bend
+            snprintf(buf, buf_size, "Pitch Bend] LSB=0x%2x MSB=0x%2x", data1, data2);
+            break;
+        default:
+            snprintf(buf, buf_size, "Unknown command]");
+            break;
+        }
+    } else {                    // Not channel-specific
+        bufpos += snprintf(buf,buf_size,"IN  [%d:  ",port); // add port
+        if (bufpos > buf_size-1)
+            return;
+        buf += sizeof(char)*bufpos;
+        switch (status) {
+        case 0xF0:             // System Exclusive. Not fully implemented.
+            snprintf(buf, buf_size, "System Exclusive] 0x%2x 0x%2x", data1, data2);
+            in_sysex = 1;
+            break;
+        case 0xF1:             // MTC Quarter Frame
+            snprintf(buf, buf_size, "MTC Quarter Frame] 0x%2x %2x", data1, data2);
+            break;
+        case 0xF2:             // Song Position Pointer
+            snprintf(buf, buf_size, "Song Position] LSB=0x%2x MSB=0x%2x", data1, data2);
+            break;
+        case 0xF3:             // Song Select
+            snprintf(buf, buf_size, "Song Select] Song=%d", data1);
+            break;
+        case 0xF5:             // Bus Select: nonstandard, vendor-specific. Untested
+            snprintf(buf, buf_size, "Bus Select] Bus=%d", data1);
+            break;
+        case 0xF6:             // Tune Request
+            snprintf(buf, buf_size, "Tune Request]");
+            break;
+        case 0xF8:             // Clock
+            snprintf(buf, buf_size, "Clock]");
+            break;
+        case 0xFA:             // Start
+            snprintf(buf, buf_size, "Start]");
+            break;
+        case 0xFB:             // Continue
+            snprintf(buf, buf_size, "Continue]");
+            break;
+        case 0xFC:             // Stop
+            snprintf(buf, buf_size, "Stop]");
+            break;
+        case 0xFE:             // Active Sensing
+            snprintf(buf, buf_size, "Active Sensing]");
+            break;
+        case 0xFF:             // System Reset
+            snprintf(buf, buf_size, "System Reset]");
+            break;
+        default:
+            snprintf(buf, buf_size, "Unknown command: %x]",command);
+            break;
+        }
+    }
+}

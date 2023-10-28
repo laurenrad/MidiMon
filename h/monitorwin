@@ -15,16 +15,16 @@
 
 /*
  * Application: !Midimon
+ * File: monitorwin.h
  * Author: Lauren Rad
- * File: ibar.h
- * Description: Header for Iconbar icon and associated menus.
-*/
+ * Purpose: Main header for the Monitor window.
+ */
 
-#ifndef MIDIMON_IBAR_H
-#define MIDIMON_IBAR_H
+#ifndef MIDIMON_MONITOR_H
+#define MIDIMON_MONITOR_H
 
-int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int update_devices_menu(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-int midi_panic(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int window_monitor_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+void add_to_monitor(char *buf);
+void update_device_display(void);
 
 #endif

@@ -41,7 +41,8 @@ Choices init_choices(void)
     c.opt_altnoteoff = DEFAULTS_OPT_ALTNOTEOFF;
     c.opt_ignoreclock = DEFAULTS_OPT_IGNORECLOCK;
     c.opt_fakefastclock = DEFAULTS_OPT_FAKEFASTCLOCK;
-
+    c.opt_usehwdelay = DEFAULTS_OPT_USEHWDELAY;
+    c.opt_showoutbound = DEFAULTS_OPT_SHOWOUTBOUND;
     return c;
 }
 
@@ -49,6 +50,7 @@ Choices init_choices(void)
  * save_choices
  * Save current choices to the choices file.
  * MidiMon saves its choices in a single flat file in the choices dir.
+ * Returns nonzero on error.
  */
 int save_choices(void)
 {
@@ -62,11 +64,13 @@ int save_choices(void)
     if (getenv("Choices$Write") != NULL) {
         snprintf(choices_write_path, MAX_PATHNAME, "%s.", getenv("Choices$Write"));
     } else {
-        report_printf("MidiMon: Err: Choices$Write not set.");  // TBD: real error
+        report_printf("MidiMon: Err: Choices$Write not set.");
         return 1;
     }
 
+#ifdef REPORTER_DEBUG
     report_printf("MidiMon: Choices$Write is: %s", choices_write_path);
+#endif
     strncat(choices_write_path, LEAFNAME, MAX_PATHNAME - strlen(choices_write_path));
 
     choices_file = fopen(choices_write_path, "wb");
@@ -91,6 +95,7 @@ int save_choices(void)
 /*
  * load_choices
  * Load the choices from the choices file and store them in the global choices struct.
+ * Returns 0 on success or silent error, 1 if path is not set.
  */
 int load_choices(void)
 {
@@ -99,7 +104,8 @@ int load_choices(void)
     if (getenv("Choices$Path") != NULL) {
         snprintf(choices_path_env, MAX_PATHNAME, "%s", getenv("Choices$Path"));
     } else {
-        report_printf("MidiMon: Err: Choices$Path not set.");   // TBD real error
+        report_printf("MidiMon: Err: Choices$Path not set.");
+        global_choices = init_choices(); // use defaults for this session
         return 1;
     }
 #ifdef REPORTER_DEBUG
@@ -111,12 +117,13 @@ int load_choices(void)
          * And if this didn't work, just generate the defaults in our instance.
          * No need to save it as it's just the defaults, that will be handled if
          * something changes.
+         * Also, output to reporter, but this will happen on first run or upgrade,
+         * so this can just be done silently otherwise.
          */
         global_choices = init_choices();
         report_printf("MidiMon: Choices file not found. Using defaults.");
     } else {
         if (fread(&global_choices, sizeof(global_choices), 1, choices_file) < 1) {
-            // TBD proper error here as well
             report_printf("MidiMon: Err: Opened Choices file but wasn't able to read it.");
             global_choices = init_choices();    // choices file was unreadable, use defaults
         } else {

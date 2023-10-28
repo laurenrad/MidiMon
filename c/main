@@ -28,6 +28,7 @@
 #include "toolbox.h"
 #include "saveas.h"
 #include "iconbar.h"
+#include "proginfo.h"
 #include "event.h"
 #include "menu.h"
 #include "wimplib.h"
@@ -47,9 +48,11 @@
 #include "messageswin.h"
 #include "songwin.h"
 #include "ibar.h"
+#include "infowin.h"
 
 #define WimpVersion	310
 struct Choices global_choices;
+enum ModuleType g_modtype = Mod_Legacy; // module type
 int device_num = -1;            // device number, numbered 0-3
 static WimpPollBlock poll_block;
 static MessagesFD messages;
@@ -61,6 +64,7 @@ int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, v
 int quit_event(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int show_help(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int pollword_nonzero(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
 int quit_message(WimpMessage *message, void *handle);
 void register_handlers(void);
 
@@ -90,12 +94,13 @@ int main(void)
      * - Lose_Caret
      * - Gain_Caret
      */
-    event_set_mask(0x1831);
+    //event_set_mask(0x1831);
+    event_set_mask(0x400001);
 
     register_handlers();        // Register event and message handlers
 
-    if (load_choices() != 0) {  // Something went wrong -- like Choices$Path is set incorrectly
-        exit(EXIT_FAILURE);
+    if (load_choices() != 0) {  // Load choices and warn if something is wrong
+        werr(0, "Couldn't locate Choices. Defaults will be used for this session.");
     }
 
     /*
@@ -107,28 +112,33 @@ int main(void)
      * device scanning. But it may still need to improve its handling of
      * this in the event the MIDI module dies while the app is running.
      */
-    err = _swix(MIDI_USBInfo, _IN(0), 0);
+    err = _swix(MIDI_Init, _IN(0), 0);
     if (err != NULL && err->errnum == Error_SWINotKnown) {
-        werr(1, "No MIDI module loaded!");
+        werr(1, "Unable to load a MIDI module! Quitting...");
     } else {
         /*
          * Initial device setup.
-         * This should be able to use the new features of USB-MIDI 0.08 to
-         * get the actual device names.
-         * For now, this is hardcoded to use the first device as hardware/module
-         * issues have prevented me from testing anything else.
+         * This will attempt to handle the absense of MIDI_USBInfo, but it will
+         * need to be tested with an older version of MidiSupport or something
+         * that doesn't have it.
          */
         int device_count;
-        _swi(MIDI_USBInfo, _IN(0) | _OUT(0), 0, &device_count);
-        report_printf("MidiMon: MIDI Devices Connected: %d", device_count);
-        if (device_count > 0) {
-            device_num = 0;     // default to the 1st device
-            // Beware! MIDI_USBInfo numbers 1-4, not 0-3.
+        err = _swix(MIDI_USBInfo, _IN(0) | _OUT(0), 0, &device_count);
+        if (err != NULL && err->errnum == Error_SWINotKnown) {
+            device_count = 1; // If this is a legacy driver, assume it only supports 1 device
+            g_modtype = Mod_Legacy; // set known module type to legacy
+            report_printf("MidiMon: Starting with legacy module.");
+        } else {
+            // for USB-MIDI devices should be numbered from 1
             for (int i = 1; i <= device_count; i++) {
-                report_printf("  Device %d: %s", i, get_product_name(i));
+                report_printf("  Device %d: %s",i,get_product_name(i));
             }
-            clear_rx_buf(1);    // clear the rx buffer for the device
+            g_modtype = Mod_USB; // This should either be USB-MIDI or a Pete's MidiSupport
+            report_printf("MidiMon: Starting with USB module.");
         }
+        device_num = 0; // default to the first device for output
+        clear_rx_buf(); // clear rx buffers to ensure events will fire
+        report_printf("MidiMon: MIDI Devices Connected: %d", device_count);
     }
 
     /*
@@ -140,22 +150,68 @@ int main(void)
     /*
      * Initialise MessageTrans
      */
-
      msgs_init();
      cb = msgs_main_control_block(); // save pointer to control block
+
+    /*
+     *  Prepare to communicate with modules
+     */
+     int pollword;
+    err = _swix(MIDIEvent_GetPollWord, _OUT(0), &pollword);
+    if (err != NULL) {
+        werr(1, "Unable to communicate with MIDIEvent! Quitting...");
+    }
 
     /*
      * Begin poll loop
      */
     while (!quit) {
-        event_poll(&event_code, &poll_block, 0);
+
+        err = event_poll(&event_code, &poll_block, (void *)pollword);
+        if (err != NULL) {
+            report_printf("Poll error: %d %s",err->errnum,err->errmess);
+        }
     }
 
     msgtrans_close_file(cb); // close Messages file
     report_printf("MidiMon: exiting!");
 
+    // Attempt to kill MIDIEvent
+    err = _swix(OS_Module, _INR(0,1), 4, "MIDIEvent");
+    if (err != NULL) {
+        report_printf("Unable to kill MIDIEvent on quit: %d %s",err->errnum,err->errmess);
+    }
+
     exit(EXIT_SUCCESS);
 
+}
+
+typedef struct PollWordData {
+    int nonzero;
+    int key_count;
+    int midi_count;
+} PollWordData;
+
+/*
+ * Firstline handler for a nonzero pollword.
+ * This needs to be registered last so it will have the highest priority.
+ * This will look for the event flag in the pollword data to be -1, which
+ * means the module is dying. If this is the case, throw up an error and quit.
+ * Otherwise, pass along unhandled so the key and MIDI handlers can look at it.
+ */
+int pollword_nonzero(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
+{
+    WimpPollWordNonZeroEvent *e = (WimpPollWordNonZeroEvent *)event;
+    PollWordData *pword = (PollWordData *)(e->poll_word);
+
+    if (pword->nonzero == -1) {
+        report_printf("pollword_nonzero: module says it's dying!");
+        werr(1, "Helper module has died, MidiMon will now quit.");
+        quit = 1; // quit
+        return 1; // return handled
+    }
+
+    return 0; // pass along unhandled to key and MIDI handlers
 }
 
 /*
@@ -202,6 +258,15 @@ int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, v
     report_printf("MidiMon: A toolbox error occurred: %d %s", e->errnum, e->errmess);
 #endif
 
+    switch (e->errnum) {
+        case 8435251:
+            werr(0, "To save, drag the icon to a directory display.");
+        break;
+        default:
+            werr(0, "Toolbox error %d: %s",e->errnum,e->errmess);
+        break;
+    }
+
     return 1;
 }
 
@@ -218,13 +283,17 @@ void register_handlers(void)
     event_register_toolbox_handler(-1, Toolbox_Error, tbox_error_handler, NULL);
 
     /*
-     * Toolbox events - window shown
+     * Toolbox events - objects created / shown
+     * These are called on creation or showing of autocreated objects, so that ObjectIds can be
+     * stored and additional setup can be performed for each object, including registering
+     * more handlers.
      */
-    event_register_toolbox_handler(-1, Event_Windows_ShowChoices, window_choices_onshow, NULL);
-    event_register_toolbox_handler(-1, Event_Windows_ShowMonitor, window_monitor_onshow, NULL);
-    event_register_toolbox_handler(-1, Event_Windows_ShowPiano, window_piano_onshow, NULL);
-    event_register_toolbox_handler(-1, Event_Windows_ShowMessages, window_messages_onshow, NULL);
-    event_register_toolbox_handler(-1, Event_Windows_ShowSong, window_song_onshow, NULL);
+    event_register_toolbox_handler(-1, Toolbox_ObjectAutoCreated, window_monitor_oncreate, NULL);
+    event_register_toolbox_handler(-1, Toolbox_ObjectAutoCreated, window_piano_oncreate, NULL);
+    event_register_toolbox_handler(-1, Toolbox_ObjectAutoCreated, window_song_oncreate, NULL);
+    event_register_toolbox_handler(-1, Toolbox_ObjectAutoCreated, window_choices_oncreate, NULL);
+    event_register_toolbox_handler(-1, Toolbox_ObjectAutoCreated, window_messages_oncreate, NULL);
+    event_register_toolbox_handler(-1, ProgInfo_AboutToBeShown, proginfo_onshow, NULL);
 
     /*
      * Toolbox events - Iconbar
@@ -233,14 +302,18 @@ void register_handlers(void)
     event_register_toolbox_handler(-1, Event_Iconbar_DeviceSelect, device_selection, NULL);
     event_register_toolbox_handler(-1, Event_Iconbar_Panic, midi_panic, NULL);
     event_register_toolbox_handler(-1, Event_Iconbar_ShowDevMenu, update_devices_menu, NULL);
+    event_register_toolbox_handler(-1, Event_Iconbar_ResetMIDI, midi_reset, NULL);
 
     /*
      * Wimp messages
      */
     event_register_message_handler(Wimp_MQuit, quit_message, 0);
     event_register_message_handler(Wimp_MPreQuit, quit_message, 0);
-    event_register_message_handler(Message_MIDIError, midi_error, 0);
-    event_register_message_handler(Message_MIDIDying, midi_dying, 0);
-    event_register_message_handler(Message_MIDIDevConnect, midi_dev_connected, 0);
-    event_register_message_handler(Message_MIDIDevDisconnect, midi_dev_disconnected, 0);
+
+    /*
+     * Wimp event handlers
+     */
+    event_register_wimp_handler(-1, Wimp_EPollWordNonZero, key_pressed, NULL);
+    event_register_wimp_handler(-1, Wimp_EPollWordNonZero, midi_incoming, NULL);
+    event_register_wimp_handler(-1, Wimp_EPollWordNonZero, pollword_nonzero, NULL);
 }

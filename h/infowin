@@ -15,14 +15,14 @@
 
 /*
  * Application: !Midimon
- * File: songwin.h
+ * File: infowin.h
  * Author: Lauren Rad
- * Purpose: Main header for the Song Control window.
-*/
+ * Purpose: Handlers for the ProgInfo dialogue. (Header)
+ */
 
-#ifndef MIDIMON_SONGWIN_H
-#define MIDIMON_SONGWIN_H
+ #ifndef MIDIMON_INFOWIN_H
+ #define MIDIMON_MESSAGESWIN_H
 
-int window_song_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+ int proginfo_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 
-#endif
+ #endif

@@ -15,7 +15,7 @@
 
  /*
   * Application: !Midimon
-  * File: midi.c
+  * File: midi.h
   * Author: Lauren Rad
   * Purpose: Code for interacting with the USBMIDI module (Header)
   */
@@ -24,7 +24,7 @@
 #define MIDIMON_MIDI_H
 
 int device_count(void);          // return number of available MIDI devices
-int clear_rx_buf(int device);    // clear the rx buf
+int clear_rx_buf(void);    // clear the rx buf
 int read_rx_command(int device); // handle new incoming message
 int tx_noteon(int note, int velocity, int oct_shift);   // send note on
 int tx_noteoff(int note, int velocity, int oct_shift);  // send note off
@@ -39,14 +39,13 @@ void tx_sysreset(void);          // tx system reset command
 void tx_pitchwheel(int pitch);   // tx pitchwheel command
 void ignore_timing(int option);  // turn timing clock messages on/off
 void reset_midi(void);           // reset the MIDI module status
+void panic_midi(void);           // force notes off
 int fake_fast_clock(int option); // set fake fast clock option
+int set_hw_delay(int option);    // set hw delay option
 int set_tx_channel(int device, int channel);    // set tx channel
-int midi_error(WimpMessage *message, void *handle);    // handle MIDI error message
-int midi_dying(WimpMessage *message, void *handle);    // handle MIDI dying msg
-int midi_dev_connected(WimpMessage *message, void *handle);    // handle device connect msg
-int midi_dev_disconnected(WimpMessage *message, void *handle); // handle device disconnect msg
 char *get_product_name(int device);     // get the product name of a device
 void parse_command(int command, char *buf, int buf_size);       // printable command
+int midi_incoming(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
 
 /*
  * USBMidi SWI numbers

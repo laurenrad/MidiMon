@@ -11,31 +11,18 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+*/
 
 /*
  * Application: !Midimon
- * File: choiceswin.h
+ * File: songwin.h
  * Author: Lauren Rad
- * Purpose: Wimp handlers for Choices window (header)
+ * Purpose: Main header for the Song Control window.
 */
 
-#ifndef MIDIMON_CHOICESWIN_H
-#define MIDIMON_CHOICESWIN_H
+#ifndef MIDIMON_SONGWIN_H
+#define MIDIMON_SONGWIN_H
 
-#include <stdlib.h>
-#include "choices.h"
-#include "event.h"
-
-/*
- * window_choices_onshow
- * This handler is called when the Choices window is shown.
- */
-int window_choices_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-
-/*
- * Make certain current choices take effect immediately.
- */
-void action_choices(Choices *const c);
+int window_song_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 
 #endif

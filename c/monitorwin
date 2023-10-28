@@ -1,0 +1,252 @@
+/* Copyright 2023 Lauren Rad
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * Application: !Midimon
+ * File: monitor.c
+ * Author: Lauren Rad
+ * Purpose: Handlers for the Monitor window.
+ */
+
+#include <stdio.h>
+#include <time.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+#include <limits.h>
+
+#include "kernel.h"
+#include "swis.h"
+#include "wimp.h"
+#include "wimplib.h"
+#include "event.h"
+#include "toolbox.h"
+#include "menu.h"
+#include "ScrollList.h"
+#include "saveas.h"
+#include "msgs.h"               // RISC_OSLib
+#include "msgtrans.h"           // RISC_OSLib
+#include "werr.h"               // RISC_OSLib
+
+// MidiMon stuff
+#include "monitorwin.h"
+#include "common.h"
+#include "midi.h"
+#include "preporter.h"
+
+/* Gadgets: Monitor window gadgets */
+#define Gadget_Monitor_ScrollList       0x00
+#define Gadget_Monitor_DeviceDisplay	0x04
+#define Gadget_Monitor_DeviceLabel	0x05
+#define MenuEntry_Monitor_Save		0x02
+#define MenuEntry_Monitor_Selection	0x05
+#define MenuEntry_Monitor_Test          0x04
+
+static ObjectId window_id_main; // Toolbox Object ID of monitor window
+
+int clear_scrolllist(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int menu_setup(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+
+/*
+ * window_monitor_onshow
+ * This handler is called when the Monitor window is created.
+ * Performs first-time setup including storing the ObjectId, loading messages, etc.
+ */
+int window_monitor_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+    ToolboxObjectAutoCreatedEvent *e = (ToolboxObjectAutoCreatedEvent *)event;
+
+    if (strcmp(e->template_name,"Monitor") == 0) {
+#ifdef REPORTER_DEBUG
+        report_printf("MidiMon: Monitor created");
+#endif
+        window_id_main = id_block->self_id;
+        // Invert ScrollList colours
+        scrolllist_set_colour(0, window_id_main, Gadget_Monitor_ScrollList, -256, 0);
+        scrolllist_set_state(0, window_id_main, Gadget_Monitor_ScrollList, 1); // multisel
+        /* Add a dummy item to the ScrollList to work around an issue with getting item 0
+           selected status. */
+        scrolllist_add_item(0, window_id_main, Gadget_Monitor_ScrollList, " ", NULL, NULL, 0);
+
+        event_register_toolbox_handler(-1, Event_Monitor_ClearLog, clear_scrolllist, NULL);
+        event_register_toolbox_handler(-1, Event_Monitor_Test, test_button_click, NULL);
+        event_register_toolbox_handler(-1, SaveAs_SaveToFile, save_log_text, NULL);
+        event_register_toolbox_handler(-1, Event_Monitor_ShowMenu, menu_setup, NULL);
+        return 1;
+    }
+
+    return 0; // pass along if it's for some other object
+}
+
+/*
+ * menu_setup
+ * Perform any needed setup for the monitor window menu.
+ * Currently this removes the "Test" menu entry if built without REPORTER_DEBUG.
+ */
+int menu_setup(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+#ifndef REPORTER_DEBUG
+    menu_remove_entry(0, id_block->self_id, MenuEntry_Monitor_Test);
+#endif
+    return 1;
+}
+
+/*
+ * clear_scrolllist
+ * This handler is called when the Clear entry is selected from the Monitor menu.
+ * Clears all entries in the Monitor.
+ */
+int clear_scrolllist(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+    scrolllist_delete_items(0, window_id_main, Gadget_Monitor_ScrollList, 0, -1); // -1 = end
+    /* Add a dummy item to the ScrollList to work around an issue with getting item 0
+           selected status. */
+    scrolllist_add_item(0, window_id_main, Gadget_Monitor_ScrollList, " ", NULL, NULL, 0);
+    return 1;
+}
+
+/*
+ * add_to_monitor
+ * Add an item to the monitor ScrollList.
+ */
+void add_to_monitor(char *buf)
+{
+    scrolllist_add_item(ScrollList_AddItem_MakeVisible, window_id_main,
+                        Gadget_Monitor_ScrollList, buf, NULL, NULL, -1);
+}
+
+/*
+ * save_log_text
+ * This handler is called in response to SaveToFile events.
+ * Depending on which menu entry this was called from, this will either
+ * save / copy the entire log contents, or just the selected entry.
+ */
+int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+    SaveAsSaveToFileEvent *e = (SaveAsSaveToFileEvent *) event;
+    unsigned int size_estimate = 0; // estimated file size
+    unsigned int item_count = 0; // number of items selected in ScrollList
+    unsigned int list_size = 0; // actual number of items in ScrollList
+    char buf[MaxLine];
+    char *filename = e->filename;
+    FILE *outfile;
+    _kernel_oserror *err;
+
+    /* First, provide the estimated file size. This is tough to do accurately
+     * without a bunch of overhead because of the lazy way the text is just
+     * being stored in the ScrollList. Not sure how important it is, but
+     * from tests it looks like the filer uses it to estimate if it will fit.
+     * So at any rate, this will err on the side of overestimating because
+     * it will multiply the maximum line length by number of lines. This
+     * will be reworked if the way the monitor stores text is reworked, of course.
+     */
+    scrolllist_count_items(0, window_id_main, Gadget_Monitor_ScrollList, &list_size);
+    if (id_block->parent_component == MenuEntry_Monitor_Save) {
+        item_count = list_size;
+    } else if (id_block->parent_component == MenuEntry_Monitor_Selection) {
+        /*
+         * This is a bit obtuse but this is just how the ScrollList works. This will
+         * need to iterate through, searching at each offset.
+         * -1 will mean end of search, and note here that there seems to be an issue where
+         * scrolllist_get_selected will NEVER return item 0, which will have to be worked
+         * around elsewhere.
+         */
+        int selected = 0;
+        scrolllist_get_selected(0, window_id_main, Gadget_Monitor_ScrollList, 0, &selected);
+        while (selected < list_size && selected != -1) {
+            item_count++;
+            scrolllist_get_selected(0, window_id_main, Gadget_Monitor_ScrollList, selected,
+                                    &selected);
+        }
+    } else {
+        return 0; // quit without handling if this was called from some other component
+    }
+    size_estimate = item_count * (unsigned int)MaxLine;
+    saveas_set_file_size(0, id_block->self_id, size_estimate);
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: File save size estimate: %d (%d items)", size_estimate, item_count);
+#endif
+
+   /* Since the file needs to be built up, first create it with OS_File 11
+    * so any errors can be dealth with appropriately.
+    */
+    err = _swix(OS_File, _INR(0,4), 11, filename, 0xfff, 0, 0);
+    if (err != NULL) {
+        report_printf("MidiMon: Error creating file: %d %s", err->errnum, err->errmess);
+        wimp_report_error(err, 0, "MidiMon", NULL, NULL, NULL);
+        saveas_file_save_completed(0, id_block->self_id, filename);
+    } else if ((outfile = fopen(filename, "w")) == NULL) {
+        /* Somehow the file couldn't be opened for writing even though it was just
+         * created. Just notify Toolbox and throw up a dialogue.
+         */
+         saveas_file_save_completed(0, id_block->self_id, filename);
+         werr(0, "Unable to create file while saving.");
+    } else {
+        if (id_block->parent_component == MenuEntry_Monitor_Save) {
+            // again, the lengths I go to have the toolbox handle the storage here...
+            // also, skip the dummy line at the top that's there for a workaround.
+            for (int i = 1; i < item_count; i++) {
+                scrolllist_get_item_text(0, window_id_main, Gadget_Monitor_ScrollList, buf,
+                                         MaxLine, i, NULL);
+                fprintf(outfile, "%s\n", buf);
+            }
+        } else { // selection save
+            /* Go through the list searching for selected items. As noted in count_selected,
+             * there seems to be an issue where this will never look at the first item.
+             * So this will need to be worked around elsewhere. -1 will mean end of search,
+             * and this also needs to keep track of if the next returned selection was already
+             * seen.
+             */
+            int selected = 0;
+            scrolllist_get_selected(0, window_id_main, Gadget_Monitor_ScrollList, 0, &selected);
+            while (selected < list_size && selected != -1) {
+                scrolllist_get_item_text(0, window_id_main, Gadget_Monitor_ScrollList, buf,
+                                         MaxLine, selected, NULL);
+                fprintf(outfile, "%s\n", buf);
+                scrolllist_get_selected(0, window_id_main, Gadget_Monitor_ScrollList, selected,
+                                        &selected);
+            }
+        }
+        saveas_file_save_completed(1, id_block->self_id, filename); // report success
+        fclose(outfile);
+    }
+
+    return 1;
+}
+
+/*
+ * test_button_click
+ * This is actually a menu item now, but this allows a debug option to
+ * add things to the scrolllist without needing actual MIDI messages.
+ */
+int test_button_click(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+    time_t t;
+    t = time(NULL);
+    struct tm *local = localtime(&t);
+    scrolllist_add_item(0, window_id_main, Gadget_Monitor_ScrollList, asctime(local), NULL, NULL,
+                        -1);
+
+    int buf1, buf2, buf3, buf4;
+    _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), 0 << 1, &buf1);
+    _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), 1 << 1, &buf2);
+    _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), 2 << 1, &buf3);
+    _swi(MIDI_InqBufferSize, _IN(0) | _OUT(0), 3 << 1, &buf4);
+    report_printf("MidiMon: Buf sizes: 0=%d 1=%d 2=%d 3=%d",buf1,buf2,buf3,buf4);
+
+    return 1;
+}

@@ -11,19 +11,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+*/
 
 /*
  * Application: !Midimon
- * File: monitor.h
+ * File: messageswin.h
  * Author: Lauren Rad
- * Purpose: Main header for the Monitor window.
+ * Purpose: Handlers for the Send Messages window. (Header)
  */
 
-#ifndef MIDIMON_MONITOR_H
-#define MIDIMON_MONITOR_H
+#ifndef MIDIMON_MESSAGESWIN_H
+#define MIDIMON_MESSAGESWIN_H
 
-int window_monitor_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-void update_device_display(void);
+/*
+ * Handler to register for the Send messages window to be shown. It will do the rest of the
+ * setup itself.
+ */
+int window_messages_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 
 #endif

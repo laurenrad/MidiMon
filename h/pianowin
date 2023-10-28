@@ -15,18 +15,17 @@
 
 /*
  * Application: !Midimon
- * File: messageswin.h
+ * File: piano.h
  * Author: Lauren Rad
- * Purpose: Handlers for the Send Messages window. (Header)
- */
+ * Purpose: Main header for the piano controller window.
+*/
 
-#ifndef MIDIMON_MESSAGESWIN_H
-#define MIDIMON_MESSAGESWIN_H
+#ifndef MIDIMON_PIANO_H
+#define MIDIMON_PIANO_H
 
-/*
- * Handler to register for the Send messages window to be shown. It will do the rest of the
- * setup itself.
- */
-int window_messages_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+#include "toolbox.h"
+
+int window_piano_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int key_pressed(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
 
 #endif

@@ -34,16 +34,9 @@
 #include "choices.h"
 
 /*
- * Everything in this file besides panic currently pertains to multi-device selection, which
- * is disabled in this release as hardware and module issues prevented me from working it out
- * properly. However, I'm leaving the code in, in case some enterprising person with two
- * working MIDI interfaces wants to implement this.
- */
-
-/*
  * device_selection
  * This handler is called when an item in the device menu is selected.
- * It both updates the menu and attempts to set the active device.
+ * It updates the menu and attempts to set the active device.
  */
 int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
@@ -52,12 +45,7 @@ int device_selection(int event_code, ToolboxEvent *event, IdBlock *id_block, voi
         menu_set_tick(0, id_block->self_id, i, 0);      // first, untick all menu items
     }
     menu_set_tick(0, id_block->self_id, device_num, 1); // then tick the selected menu item
-    /*
-     * Tell the monitor window to update its device display, if it's been opened.
-     * Devices are numbered 1-4 here.
-     */
-    update_device_display();
-    clear_rx_buf(device_num);   // clear device rx buffer
+    clear_rx_buf();   // clear device rx buffer
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Device num set to %d and buffer cleared.", device_num);
 #endif
@@ -93,9 +81,14 @@ int update_devices_menu(int event_code, ToolboxEvent *event, IdBlock *id_block, 
     for (int component = 0; component < MAX_DEVICES; component++) {
         if (component < devices) {
             menu_set_fade(0, menu_id, component, 0);    // unfade
-            prodname = get_product_name(component + 1); // devices are numbered 1-4 here
-            snprintf(entrystring, PRODNAME_LENGTH, "%d %s", component + 1, prodname);
-            menu_set_entry_text(0, menu_id, component, entrystring);
+            // if this is a USB module, get the product name from the module. Otherwise just num.
+            if (g_modtype == Mod_USB && (prodname = get_product_name(component+1)) != NULL) {
+                snprintf(entrystring, PRODNAME_LENGTH, "%d %s", component+1, prodname);
+                menu_set_entry_text(0, menu_id, component, entrystring);
+            } else {
+                snprintf(entrystring, PRODNAME_LENGTH, "%d", component+1);
+                menu_set_entry_text(0, menu_id, component, entrystring);
+            }
         } else {
             menu_set_fade(0, menu_id, component, 1);    // fade
         }
@@ -111,12 +104,23 @@ int update_devices_menu(int event_code, ToolboxEvent *event, IdBlock *id_block, 
 }
 
 /*
+ * midi_reset
+ * This handler is called when the Reset MIDI menu item in the Iconbar is clicked.
+ * It calls reset_midi to reset the state of the MIDI module.
+ */
+int midi_reset(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+    reset_midi();
+    return 1;
+}
+
+/*
  * midi_panic
  * This handler is called when the Panic menu item in the Iconbar is clicked.
- * It calls reset_midi to reset the state of the MIDI module.
+ * It calls panic_midi to attempt to force all notes off.
  */
 int midi_panic(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-    reset_midi();
+    panic_midi();
     return 1;
 }

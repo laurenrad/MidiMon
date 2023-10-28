@@ -21,6 +21,7 @@
 */
 
 #include <stdbool.h>
+#include <string.h>
 
 #include "toolbox.h"
 #include "gadgets.h"
@@ -43,33 +44,36 @@
 #define Gadget_Song_SongSelSend		0x05    // Song select send
 
 static ObjectId window_id_song;   // ObjectId of this window
-static bool song_opened = false;  // Track if window_id_song is known
 
 int button_songstart(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int button_songcontinue(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int button_songstop(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int button_sendsongsel(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
-void load_messages_songwin(void);
 
 /*
- * window_song_onshow
- * This handler is called when the Song window is shown.
+ * window_song_oncreate
+ * This handler is called when the Song window is created.
  * This performs first-time setup, such as storing the ObjectId, loading Messages,
  * and registering event handlers.
  */
-int window_song_onshow(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+int window_song_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
-    if (song_opened == false) {
-        song_opened = true;
+    ToolboxObjectAutoCreatedEvent *e = (ToolboxObjectAutoCreatedEvent *)event;
+
+    if (strcmp(e->template_name,"SongControl") == 0) {
+#ifdef REPORTER_DEBUG
+        report_printf("MidiMon: SongControl created");
+#endif
         window_id_song = id_block->self_id;
-        load_messages_songwin();
         event_register_toolbox_handler(-1, Event_Song_Start, button_songstart, NULL);
         event_register_toolbox_handler(-1, Event_Song_Continue, button_songcontinue, NULL);
         event_register_toolbox_handler(-1, Event_Song_Stop, button_songstop, NULL);
         event_register_toolbox_handler(-1, Event_Song_SendSongSel, button_sendsongsel, NULL);
+
+        return 1;
     }
 
-    return 1;
+    return 0;
 }
 
 /*
@@ -94,7 +98,6 @@ int button_songcontinue(int event_code, ToolboxEvent *event, IdBlock *id_block, 
     return 1;
 }
 
-/* Button handler for Stop button. Tx song stop message */
 /*
  * button_songstop
  * This handler is called when the Stop button is clicked.
@@ -116,55 +119,7 @@ int button_sendsongsel(int event_code, ToolboxEvent *event, IdBlock *id_block, v
     int song_num = 0;
 
     numberrange_get_value(0, window_id_song, Gadget_Song_SongNum, &song_num);
-    /*
-     * Making the numberrange writable allows it to have invalid (positive) values.
-     * There might be a standard way to handle this, but for now if it's out of range set it
-     * back to 127. Setting the numberrange fails on very large values, but it still sends 127
-     * so this should be ok enough for now.
-     */
-    if (song_num > 127) {
-        numberrange_set_value(0, window_id_song, Gadget_Song_SongNum, 127);
-        song_num = 127;
-    }
     tx_songsel(song_num);
 
     return 1;
-}
-
-void load_messages_songwin(void)
-{
-    _kernel_oserror *err;
-
-    /*
-     * Window and gadget text
-     */
-    err = window_set_title(0, window_id_song, msgs_lookup("SongControl|1:err")); // window title
-    button_set_value(0, window_id_song, Gadget_Song_SongNumLabel,
-                     msgs_lookup("SongControl|9:Song Select"));   // song select label
-    actionbutton_set_text(0, window_id_song, Gadget_Song_Start,
-                          msgs_lookup("SongControl|3:Start"));    // start button
-    actionbutton_set_text(0, window_id_song, Gadget_Song_Continue,
-                          msgs_lookup("SongControl|5:Continue")); // continue button
-    actionbutton_set_text(0, window_id_song, Gadget_Song_Stop,
-                          msgs_lookup("SongControl|7:Stop"));     // stop button
-    actionbutton_set_text(0, window_id_song, Gadget_Song_SongSelSend,
-                          msgs_lookup("SongControl|12:Send"));    // song select send button
-
-    /*
-     * Help text
-     */
-    gadget_set_help_message(0, window_id_song, Gadget_Song_Start,
-                            msgs_lookup("SongControl|2:Unable to get help."));  // start button
-    gadget_set_help_message(0, window_id_song, Gadget_Song_Continue,
-                            msgs_lookup("SongControl|4:Unable to get help."));  // continue button
-    gadget_set_help_message(0, window_id_song, Gadget_Song_Stop,
-                            msgs_lookup("SongControl|6:Unable to get help."));  // stop button
-    gadget_set_help_message(0, window_id_song, Gadget_Song_SongSelSend,
-                            msgs_lookup("SongControl|11:Unable to get help.")); // song select send
-    gadget_set_help_message(0, window_id_song, Gadget_Song_SongNum,
-                            msgs_lookup("SongControl|10:Unable to get help.")); // song number
-
-    if (err != NULL) {
-        report_printf("MidiMon: err in load_messages_songwin - %d: %s", err->errnum, err->errmess);
-    }
 }
