@@ -78,6 +78,10 @@ int window_monitor_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_blo
         // Invert ScrollList colours
         scrolllist_set_colour(0, window_id_main, Gadget_Monitor_ScrollList, -256, 0);
         scrolllist_set_state(0, window_id_main, Gadget_Monitor_ScrollList, 1); // multisel
+        /* Add a dummy item to the ScrollList to work around an issue with getting item 0
+           selected status. */
+        scrolllist_add_item(0, window_id_main, Gadget_Monitor_ScrollList, " ", NULL, NULL, 0);
+
         event_register_toolbox_handler(-1, Event_Monitor_ClearLog, clear_scrolllist, NULL);
         event_register_toolbox_handler(-1, Event_Monitor_Test, test_button_click, NULL);
         event_register_toolbox_handler(-1, SaveAs_SaveToFile, save_log_text, NULL);
@@ -109,6 +113,9 @@ int menu_setup(int event_code, ToolboxEvent *event, IdBlock *id_block, void *han
 int clear_scrolllist(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
     scrolllist_delete_items(0, window_id_main, Gadget_Monitor_ScrollList, 0, -1); // -1 = end
+    /* Add a dummy item to the ScrollList to work around an issue with getting item 0
+           selected status. */
+    scrolllist_add_item(0, window_id_main, Gadget_Monitor_ScrollList, " ", NULL, NULL, 0);
     return 1;
 }
 
@@ -191,7 +198,8 @@ int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *
     } else {
         if (id_block->parent_component == MenuEntry_Monitor_Save) {
             // again, the lengths I go to have the toolbox handle the storage here...
-            for (int i = 0; i < item_count; i++) {
+            // also, skip the dummy line at the top that's there for a workaround.
+            for (int i = 1; i < item_count; i++) {
                 scrolllist_get_item_text(0, window_id_main, Gadget_Monitor_ScrollList, buf,
                                          MaxLine, i, NULL);
                 fprintf(outfile, "%s", buf);
