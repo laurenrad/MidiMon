@@ -1,0 +1,21 @@
+------------------
+1.50 (28-Oct-2023)
+------------------
+- Various UI tweaks.
+- New option to turn HW delay on/off.
+- New "Panic" option for forcing notes off alongside resetting MIDI module.
+- Helper modules combined into one module (MIDIEvent), with stability
+  improvements.
+- Support for Peter Everett's USB-enabled MIDI Support system.
+  (Does not register as a driver with MIDI Support, but does work).
+- Bugfix: Pitch wheel in piano window works correctly
+- Bugfix: System exclusive no longer breaks monitor window.
+- Code cleanup.
+- Multi-device support now enabled.
+- Monitor can now receive items before it is opened for the first time.
+- Multiple items can be selected for selection export in the monitor.
+
+------------------
+1.00 (28-Aug-2023)
+------------------
+- Initial release
