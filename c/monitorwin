@@ -202,7 +202,7 @@ int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *
             for (int i = 1; i < item_count; i++) {
                 scrolllist_get_item_text(0, window_id_main, Gadget_Monitor_ScrollList, buf,
                                          MaxLine, i, NULL);
-                fprintf(outfile, "%s", buf);
+                fprintf(outfile, "%s\n", buf);
             }
         } else { // selection save
             /* Go through the list searching for selected items. As noted in count_selected,
@@ -216,7 +216,7 @@ int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *
             while (selected < list_size && selected != -1) {
                 scrolllist_get_item_text(0, window_id_main, Gadget_Monitor_ScrollList, buf,
                                          MaxLine, selected, NULL);
-                fprintf(outfile, "%s", buf);
+                fprintf(outfile, "%s\n", buf);
                 scrolllist_get_selected(0, window_id_main, Gadget_Monitor_ScrollList, selected,
                                         &selected);
             }
