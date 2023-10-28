@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include "kernel.h"
 #include "swis.h"
@@ -76,6 +77,7 @@ int window_monitor_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_blo
         window_id_main = id_block->self_id;
         // Invert ScrollList colours
         scrolllist_set_colour(0, window_id_main, Gadget_Monitor_ScrollList, -256, 0);
+        scrolllist_set_state(0, window_id_main, Gadget_Monitor_ScrollList, 1); // multisel
         event_register_toolbox_handler(-1, Event_Monitor_ClearLog, clear_scrolllist, NULL);
         event_register_toolbox_handler(-1, Event_Monitor_Test, test_button_click, NULL);
         event_register_toolbox_handler(-1, SaveAs_SaveToFile, save_log_text, NULL);
@@ -129,86 +131,89 @@ void add_to_monitor(char *buf)
 int save_log_text(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
 {
     SaveAsSaveToFileEvent *e = (SaveAsSaveToFileEvent *) event;
-    unsigned int size_estimate = 0;     // estimated file size
-    unsigned int item_count = 0;        // number of items in ScrollList
-    int selected = 0;           // currently selected item if applicable
+    unsigned int size_estimate = 0; // estimated file size
+    unsigned int item_count = 0; // number of items selected in ScrollList
+    unsigned int list_size = 0; // actual number of items in ScrollList
     char buf[MaxLine];
     char *filename = e->filename;
     FILE *outfile;
     _kernel_oserror *err;
 
-    /*
-     * First, when estimating size check if we are doing the whole thing or
-     * if it's just the selection
+    /* First, provide the estimated file size. This is tough to do accurately
+     * without a bunch of overhead because of the lazy way the text is just
+     * being stored in the ScrollList. Not sure how important it is, but
+     * from tests it looks like the filer uses it to estimate if it will fit.
+     * So at any rate, this will err on the side of overestimating because
+     * it will multiply the maximum line length by number of lines. This
+     * will be reworked if the way the monitor stores text is reworked, of course.
      */
+    scrolllist_count_items(0, window_id_main, Gadget_Monitor_ScrollList, &list_size);
     if (id_block->parent_component == MenuEntry_Monitor_Save) {
-        /*
-         * Must provide the estimated file size. This is tough to do accurately
-         * because of the lazy way the text is just being stored in the ScrollList,
-         * but how important is this? At any rate this will err on the side of
-         * overestimating because it will multiply the maximum line length by
-         * number of lines. If proper allocation is done later this will be
-         * reworked.
-         */
-        scrolllist_count_items(0, window_id_main, Gadget_Monitor_ScrollList, &item_count);
-        size_estimate = item_count * (unsigned int)MaxLine;
-        saveas_set_file_size(0, id_block->self_id, size_estimate);
+        item_count = list_size;
     } else if (id_block->parent_component == MenuEntry_Monitor_Selection) {
-        err = scrolllist_get_selected(0, window_id_main, Gadget_Monitor_ScrollList, 0, &selected);
-        err = scrolllist_get_item_text(0, window_id_main, Gadget_Monitor_ScrollList,
-                                       buf, MaxLine, selected, NULL);
-        if (err != NULL) {
-#ifdef REPORTER_DEBUG
-            report_printf("MidiMon: err: %d; %s\n", err->errnum, err->errmess);
-#endif
-            werr(0,"Error saving selection. Try selecting something?");
-            return 1; // most likely reason for error here is no selection was made.
+        /*
+         * This is a bit obtuse but this is just how the ScrollList works. This will
+         * need to iterate through, searching at each offset.
+         * -1 will mean end of search, and note here that there seems to be an issue where
+         * scrolllist_get_selected will NEVER return item 0, which will have to be worked
+         * around elsewhere.
+         */
+        int selected = 0;
+        scrolllist_get_selected(0, window_id_main, Gadget_Monitor_ScrollList, 0, &selected);
+        while (selected < list_size && selected != -1) {
+            item_count++;
+            scrolllist_get_selected(0, window_id_main, Gadget_Monitor_ScrollList, selected,
+                                    &selected);
         }
-        size_estimate = strlen(buf);
-#ifdef REPORTER_DEBUG
-        report_printf("MidiMon: File save size estimate: %d", size_estimate);
-#endif
-        saveas_set_file_size(0, id_block->self_id, size_estimate);
     } else {
-        return 0; // quit without handling if this was called from somewhere else
+        return 0; // quit without handling if this was called from some other component
     }
+    size_estimate = item_count * (unsigned int)MaxLine;
+    saveas_set_file_size(0, id_block->self_id, size_estimate);
+#ifdef REPORTER_DEBUG
+    report_printf("MidiMon: File save size estimate: %d (%d items)", size_estimate, item_count);
+#endif
 
-    /*
-     * Since we need to build the file up, first create it with OS_File 11
-     * so any oserrors can be caught and dealt with appropriately.
-     */
-    err = _swix(OS_File, _INR(0, 4), 11, filename, 0xfff, 0, 0);
+   /* Since the file needs to be built up, first create it with OS_File 11
+    * so any errors can be dealth with appropriately.
+    */
+    err = _swix(OS_File, _INR(0,4), 11, filename, 0xfff, 0, 0);
     if (err != NULL) {
         report_printf("MidiMon: Error creating file: %d %s", err->errnum, err->errmess);
         wimp_report_error(err, 0, "MidiMon", NULL, NULL, NULL);
         saveas_file_save_completed(0, id_block->self_id, filename);
     } else if ((outfile = fopen(filename, "w")) == NULL) {
-        /*
-         * Somehow the file couldn't be opened for writing even though it was
-         * just created. Just notify Toolbox and throw up a dialogue for now
+        /* Somehow the file couldn't be opened for writing even though it was just
+         * created. Just notify Toolbox and throw up a dialogue.
          */
-        saveas_file_save_completed(0, id_block->self_id, filename);
-        werr(0, "Unable to create file while saving.");
+         saveas_file_save_completed(0, id_block->self_id, filename);
+         werr(0, "Unable to create file while saving.");
     } else {
         if (id_block->parent_component == MenuEntry_Monitor_Save) {
-            /*
-             * Do the actual save by pulling each line from the ScrollList and
-             * * printing them to the file. Stupid and inefficient, but again, this avoids
-             * * having to deal with the storage allocation manually!
-             */
+            // again, the lengths I go to have the toolbox handle the storage here...
             for (int i = 0; i < item_count; i++) {
-                err = scrolllist_get_item_text(0, window_id_main, Gadget_Monitor_ScrollList,
-                                               buf, MaxLine, selected, NULL);
+                scrolllist_get_item_text(0, window_id_main, Gadget_Monitor_ScrollList, buf,
+                                         MaxLine, i, NULL);
                 fprintf(outfile, "%s", buf);
             }
-        } else {
-            err = scrolllist_get_item_text(0, window_id_main, Gadget_Monitor_ScrollList,
-                                           buf, MaxLine, selected, NULL);
-            fprintf(outfile, "%s", buf);
+        } else { // selection save
+            /* Go through the list searching for selected items. As noted in count_selected,
+             * there seems to be an issue where this will never look at the first item.
+             * So this will need to be worked around elsewhere. -1 will mean end of search,
+             * and this also needs to keep track of if the next returned selection was already
+             * seen.
+             */
+            int selected = 0;
+            scrolllist_get_selected(0, window_id_main, Gadget_Monitor_ScrollList, 0, &selected);
+            while (selected < list_size && selected != -1) {
+                scrolllist_get_item_text(0, window_id_main, Gadget_Monitor_ScrollList, buf,
+                                         MaxLine, selected, NULL);
+                fprintf(outfile, "%s", buf);
+                scrolllist_get_selected(0, window_id_main, Gadget_Monitor_ScrollList, selected,
+                                        &selected);
+            }
         }
-
-        saveas_file_save_completed(1, id_block->self_id, filename);
-
+        saveas_file_save_completed(1, id_block->self_id, filename); // report success
         fclose(outfile);
     }
 
