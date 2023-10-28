@@ -53,6 +53,8 @@
 #define Gadget_Msg_SysResetLabel	0x17    // Label: "System Reset" (actually a button)
 #define Gadget_Msg_MiscLblBox		0x1A    // Label: "Misc" (actually a button)
 #define Gadget_Msg_BankSelectMSB        0x1B    // Bank Select MSB
+#define Gadget_Msg_LabelMSB             0x1C    // Label: "MSB"
+#define Gadget_Msg_LabelLSB             0x1D    // Label: "LSB"
 #define Gadget_Msg_BankSelectLSB        0x1E    // Bank Select LSB
 #define Gadget_Msg_BankSelectOpt        0x1F    // Option: Bank Select
 #define Gadget_Msg_BankSelectMSB        0x1B
@@ -61,6 +63,7 @@ static ObjectId window_id_messages = -1;
 
 int stringset_programchg(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int button_progchgsend(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int option_banksel(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int button_txcntrlchg(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int button_txtunereq(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int button_txsysreset(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
@@ -84,6 +87,7 @@ int window_messages_oncreate(int event_code, ToolboxEvent *event, IdBlock *id_bl
         stringset_set_available(0, window_id_messages, Gadget_Msg_ProgChgStr,
                                 msgs_lookup("Messages|31:Unable to read Messages file."));
         event_register_toolbox_handler(-1, Event_Msg_SendProgChg, button_progchgsend, NULL);
+        event_register_toolbox_handler(-1, OptionButton_StateChanged, option_banksel, NULL);
         event_register_toolbox_handler(-1, Event_Msg_TxCntrlChg, button_txcntrlchg, NULL);
         event_register_toolbox_handler(-1, Event_Msg_TxTuneReq, button_txtunereq, NULL);
         event_register_toolbox_handler(-1, Event_Msg_TxSysReset, button_txsysreset, NULL);
@@ -140,6 +144,45 @@ int button_progchgsend(int event_code, ToolboxEvent *event, IdBlock *id_block, v
 
     numberrange_get_value(0, window_id_messages, Gadget_Msg_ProgChgNum, &prog);
     tx_progchg(prog);
+
+    return 1;
+}
+
+/*
+ * option_banksel
+ * This handler is called when the Bank Select option is toggled.
+ * It exists to fade/unfade the MSB and LSB numberranges and associated labels.
+ */
+int option_banksel(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle)
+{
+    OptionButtonStateChangedEvent *e = (OptionButtonStateChangedEvent *)event;
+    unsigned int flags = 0; // flags for gadget being modified
+
+    if (id_block->self_component == Gadget_Msg_BankSelectOpt) {
+        if (e->new_state == 0) {
+            report_printf("Bank sel off");
+            gadget_get_flags(0, id_block->self_id, Gadget_Msg_BankSelectMSB, &flags);
+            gadget_set_flags(0, id_block->self_id, Gadget_Msg_BankSelectMSB, flags|Gadget_Faded);
+            gadget_get_flags(0, id_block->self_id, Gadget_Msg_BankSelectLSB, &flags);
+            gadget_set_flags(0, id_block->self_id, Gadget_Msg_BankSelectLSB, flags|Gadget_Faded);
+            gadget_get_flags(0, id_block->self_id, Gadget_Msg_LabelMSB, &flags);
+            gadget_set_flags(0, id_block->self_id, Gadget_Msg_LabelMSB, flags|Gadget_Faded);
+            gadget_get_flags(0, id_block->self_id, Gadget_Msg_LabelLSB, &flags);
+            gadget_set_flags(0, id_block->self_id, Gadget_Msg_LabelLSB, flags|Gadget_Faded);
+        } else {
+            report_printf("Bank sel on");
+            gadget_get_flags(0, id_block->self_id, Gadget_Msg_BankSelectMSB, &flags);
+            gadget_set_flags(0, id_block->self_id, Gadget_Msg_BankSelectMSB, flags&(!Gadget_Faded));
+            gadget_get_flags(0, id_block->self_id, Gadget_Msg_BankSelectLSB, &flags);
+            gadget_set_flags(0, id_block->self_id, Gadget_Msg_BankSelectLSB, flags&(!Gadget_Faded));
+            gadget_get_flags(0, id_block->self_id, Gadget_Msg_LabelMSB, &flags);
+            gadget_set_flags(0, id_block->self_id, Gadget_Msg_LabelMSB, flags&(!Gadget_Faded));
+            gadget_get_flags(0, id_block->self_id, Gadget_Msg_LabelLSB, &flags);
+            gadget_set_flags(0, id_block->self_id, Gadget_Msg_LabelLSB, flags&(!Gadget_Faded));
+        }
+    } else {
+        return 0; // not for us, return unhandled
+    }
 
     return 1;
 }
