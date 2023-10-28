@@ -54,8 +54,8 @@ topic:
   - If a MIDI module is not already loaded on startup and MidiMon is unable
     to start one, a warning will be displayed and the application will exit.
   - MidiMon uses an additional helper module (MIDIEvent) to perform its 
-    functions. This should not be stopped while MidiMon is running.
-    MidiMon does not currently stop this module on exit, but after
+    functions. This should not be stopped while MidiMon is running, or MidiMon
+    will quit. MidiMon does not currently stop this module on exit, but after
     qutting MidiMon this module can be stopped.
   - Hardware limitations and issues have limited the testability of this
     software somewhat; If any issues are encountered, I recommend confirming

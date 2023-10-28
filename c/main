@@ -64,6 +64,7 @@ int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, v
 int quit_event(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int show_help(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
 int tbox_error_handler(int event_code, ToolboxEvent *event, IdBlock *id_block, void *handle);
+int pollword_nonzero(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle);
 int quit_message(WimpMessage *message, void *handle);
 void register_handlers(void);
 
@@ -179,6 +180,34 @@ int main(void)
 
 }
 
+typedef struct PollWordData {
+    int nonzero;
+    int key_count;
+    int midi_count;
+} PollWordData;
+
+/*
+ * Firstline handler for a nonzero pollword.
+ * This needs to be registered last so it will have the highest priority.
+ * This will look for the event flag in the pollword data to be -1, which
+ * means the module is dying. If this is the case, throw up an error and quit.
+ * Otherwise, pass along unhandled so the key and MIDI handlers can look at it.
+ */
+int pollword_nonzero(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
+{
+    WimpPollWordNonZeroEvent *e = (WimpPollWordNonZeroEvent *)event;
+    PollWordData *pword = (PollWordData *)(e->poll_word);
+
+    if (pword->nonzero == -1) {
+        report_printf("pollword_nonzero: module says it's dying!");
+        werr(1, "Helper module has died, MidiMon will now quit.");
+        quit = 1; // quit
+        return 1; // return handled
+    }
+
+    return 0; // pass along unhandled to key and MIDI handlers
+}
+
 /*
  * quit_event
  * This handler is called when the Quit item is selected from the Iconbar menu.
@@ -280,4 +309,5 @@ void register_handlers(void)
      */
     event_register_wimp_handler(-1, Wimp_EPollWordNonZero, key_pressed, NULL);
     event_register_wimp_handler(-1, Wimp_EPollWordNonZero, midi_incoming, NULL);
+    event_register_wimp_handler(-1, Wimp_EPollWordNonZero, pollword_nonzero, NULL);
 }

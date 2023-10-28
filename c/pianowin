@@ -43,12 +43,6 @@
 /*
  * These structs correspond to the data coming from the MIDIEvent helper module.
  */
-typedef struct KeyEventData {
-    char key_num;               // see PRM 1-158
-    int driver_id;
-    int state;                  // 0 = up, 1 = down
-} KeyEventData;
-
 typedef struct PollWordData {
     int nonzero;
     int key_count;
@@ -364,7 +358,7 @@ int key_pressed(int event_code, WimpPollBlock *event, IdBlock *id_block, void *h
  * that the components have sequential IDs, which should be true but careful
  * mucking around in the resource file then.
  */
-int key_clicked(int event_code, WimpPollBlock * event, IdBlock * id_block, void *handle)
+int key_clicked(int event_code, WimpPollBlock *event, IdBlock *id_block, void *handle)
 {
     ObjectId window = id_block->self_id;
     ComponentId component = id_block->self_component;

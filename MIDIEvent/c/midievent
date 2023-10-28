@@ -95,6 +95,8 @@ _kernel_oserror *midievent_final(int fatal, int podule, void *pw)
   IGNORE(podule);
   release_event(pw);
 
+  pollword.nonzero = -1; // flag module dying so the Wimp task can quit
+
   return NULL;
 }
 
