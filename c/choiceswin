@@ -189,6 +189,9 @@ void action_choices(Choices *const c)
 {
     set_tx_channel(device_num, c->opt_txchan);
     ignore_timing(c->opt_ignoreclock);
-    fake_fast_clock(c->opt_fakefastclock);
-    set_hw_delay(c->opt_usehwdelay);
+    // The following only work with the USB modules
+    if (g_modtype == Mod_USB) {
+        fake_fast_clock(c->opt_fakefastclock);
+        set_hw_delay(c->opt_usehwdelay);
+    }
 }
