@@ -160,7 +160,6 @@ int option_banksel(int event_code, ToolboxEvent *event, IdBlock *id_block, void 
 
     if (id_block->self_component == Gadget_Msg_BankSelectOpt) {
         if (e->new_state == 0) {
-            report_printf("Bank sel off");
             gadget_get_flags(0, id_block->self_id, Gadget_Msg_BankSelectMSB, &flags);
             gadget_set_flags(0, id_block->self_id, Gadget_Msg_BankSelectMSB, flags|Gadget_Faded);
             gadget_get_flags(0, id_block->self_id, Gadget_Msg_BankSelectLSB, &flags);
@@ -170,7 +169,6 @@ int option_banksel(int event_code, ToolboxEvent *event, IdBlock *id_block, void 
             gadget_get_flags(0, id_block->self_id, Gadget_Msg_LabelLSB, &flags);
             gadget_set_flags(0, id_block->self_id, Gadget_Msg_LabelLSB, flags|Gadget_Faded);
         } else {
-            report_printf("Bank sel on");
             gadget_get_flags(0, id_block->self_id, Gadget_Msg_BankSelectMSB, &flags);
             gadget_set_flags(0, id_block->self_id, Gadget_Msg_BankSelectMSB, flags&(!Gadget_Faded));
             gadget_get_flags(0, id_block->self_id, Gadget_Msg_BankSelectLSB, &flags);
