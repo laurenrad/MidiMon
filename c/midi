@@ -576,7 +576,7 @@ void panic_midi(void)
 int set_tx_channel(int device, int channel)
 {
     int new_chan = 0;
-    channel = channel + (16 * (device - 1));    // convert channel number to port number based on device
+    channel = channel + (16 * device);    // convert channel number to port number based on device
     _swi(MIDI_SetTxChannel, _IN(0) | _OUT(0), channel, &new_chan);
 #ifdef REPORTER_DEBUG
     report_printf("MidiMon: Tx channel set. device=%d channel=%d", device, new_chan);
